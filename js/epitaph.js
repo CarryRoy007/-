@@ -85,7 +85,7 @@ const Epitaph = {
       : `「${mainEpitaph}」— ${mainMeaning}`;
 
     const evaluation = this._generateEvaluation(stats, citiesGained, countriesDestroyed, turn, country, mainEpitaph, subEpitaph);
-    legacyText = this._generateLegacy(stats, citiesGained, countriesDestroyed, country, mainEpitaph, avgStat);
+    legacyText = this._generateLegacy(stats, citiesGained, countriesDestroyed, country, mainEpitaph, avgStat, stars);
 
     return {
       fullName, epitaphMeaning, citiesGained, countriesDestroyed,
@@ -165,7 +165,7 @@ const Epitaph = {
     return text;
   },
 
-  _generateLegacy(stats, citiesGained, countriesDestroyed, country, mainEpitaph, avgStat) {
+  _generateLegacy(stats, citiesGained, countriesDestroyed, country, mainEpitaph, avgStat, stars) {
     let text = '';
     const totalCities = Object.keys(GameState.territory).length;
     const eraName = GameState.era ? GameState.era.name : '战国';

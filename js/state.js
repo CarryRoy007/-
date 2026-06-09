@@ -22,6 +22,7 @@ const GameState = {
   generation: 1,
   dynastyName: "",
   successionPending: false,
+  attackArrows: [],
 
   init(eraId, countryName) {
     const era = ERAS.find(e => e.id === eraId);
@@ -41,6 +42,7 @@ const GameState = {
     this.generation = 1;
     this.dynastyName = countryName;
     this.successionPending = false;
+    this.attackArrows = [];
     this.warLog = [];
     this.currentEvent = null;
     this.characters = [];

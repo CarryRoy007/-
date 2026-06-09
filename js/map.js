@@ -50,7 +50,6 @@ const MapRenderer = {
     bg.setAttribute("opacity", "0.12");
     this.svg.appendChild(bg);
 
-    this._drawRivers();
     this._drawTerrain();
     this._drawTerritories();
     this._drawConnections();
@@ -65,37 +64,6 @@ const MapRenderer = {
     this.tooltip.className = 'map-tooltip';
     this.tooltip.style.display = 'none';
     document.body.appendChild(this.tooltip);
-  },
-
-  _drawRivers() {
-    const rivers = [
-      // 黄河 — "几"字形
-      {path:"M 120,240 Q 130,120 200,80 Q 320,60 440,80 Q 530,100 550,160 Q 580,220 600,260",width:3},
-      // 长江 — 横贯南方
-      {path:"M 140,400 Q 280,430 400,440 Q 500,450 600,430",width:3},
-      // 渭水 (秦)
-      {path:"M 80,200 Q 120,240 160,250 Q 200,255 200,80",width:1.2},
-      // 汾水 (赵/魏)
-      {path:"M 280,80 Q 285,140 290,200 Q 295,260 300,320",width:1.2},
-    ];
-    for (const r of rivers) {
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", r.path);
-      path.setAttribute("fill", "none");
-      path.setAttribute("stroke", "#5a8aa0");
-      path.setAttribute("stroke-width", r.width);
-      path.setAttribute("stroke-opacity", "0.35");
-      path.setAttribute("stroke-linecap", "round");
-      this.svg.appendChild(path);
-      const hl = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      hl.setAttribute("d", r.path);
-      hl.setAttribute("fill", "none");
-      hl.setAttribute("stroke", "#8ac4d8");
-      hl.setAttribute("stroke-width", Math.max(0.5, r.width - 1));
-      hl.setAttribute("stroke-opacity", "0.1");
-      hl.setAttribute("stroke-linecap", "round");
-      this.svg.appendChild(hl);
-    }
   },
 
   _drawTerrain() {
@@ -292,6 +260,67 @@ const MapRenderer = {
       g.addEventListener('mouseleave', () => { this.tooltip.style.display = 'none'; });
 
       this.svg.appendChild(g);
+    }
+  },
+
+  drawAttackArrows() {
+    // Remove old arrows
+    this.svg.querySelectorAll('.atk-arrow, .atk-label').forEach(el => el.remove());
+    if (!GameState.attackArrows || GameState.attackArrows.length === 0) return;
+
+    const defs = this.svg.querySelector('defs');
+    // Add arrowhead marker if not exists
+    if (!this.svg.getElementById('atkArrowRed')) {
+      for (const [id, color] of [['atkArrowRed', '#c41e3a'], ['atkArrowGold', '#e8d07a']]) {
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+        marker.setAttribute("id", id); marker.setAttribute("viewBox", "0 0 10 10");
+        marker.setAttribute("refX", 5); marker.setAttribute("refY", 5);
+        marker.setAttribute("markerWidth", 6); marker.setAttribute("markerHeight", 6);
+        marker.setAttribute("orient", "auto");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
+        path.setAttribute("fill", color);
+        marker.appendChild(path);
+        defs.appendChild(marker);
+      }
+    }
+
+    const drawn = new Set();
+    for (const arrow of GameState.attackArrows) {
+      const key = arrow.from + '→' + arrow.to;
+      if (drawn.has(key)) continue;
+      drawn.add(key);
+
+      const fromC = GameState.countries[arrow.from];
+      const toC = GameState.countries[arrow.to];
+      if (!fromC || !toC || !fromC.alive || !toC.alive) continue;
+      const fromCap = fromC.capital || fromC.cities[0];
+      const toCity = arrow.city || (toC.cities[0]);
+      const fp = this._getCityPos(fromCap);
+      const tp = this._getCityPos(toCity);
+      if (!fp || !tp) continue;
+
+      const isPlayer = arrow.from === GameState.playerCountry;
+      const color = isPlayer ? '#e8d07a' : arrow.result === 'win' ? '#c41e3a' : '#f39c12';
+
+      // Draw curved line
+      const midX = (fp[0] + tp[0]) / 2 + (fp[1] - tp[1]) * 0.3;
+      const midY = (fp[1] + tp[1]) / 2 - (fp[0] - tp[0]) * 0.3;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", `M ${fp[0]},${fp[1]} Q ${midX},${midY} ${tp[0]},${tp[1]}`);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", color);
+      path.setAttribute("stroke-width", isPlayer ? '2.5' : '1.5');
+      path.setAttribute("stroke-opacity", '0.7');
+      path.setAttribute("marker-end", `url(#${isPlayer ? 'atkArrowGold' : 'atkArrowRed'})`);
+      path.setAttribute("class", 'atk-arrow');
+
+      // Pulsing animation for player attacks
+      if (isPlayer) {
+        path.innerHTML = `<animate attributeName="stroke-opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>`;
+      }
+
+      this.svg.appendChild(path);
     }
   },
 

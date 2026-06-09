@@ -30,9 +30,11 @@ const Engine = {
     }
 
     this._checkCharacters();
+    GameState.attackArrows = [];
     GameState.worldEvents = [];
     this._runAI();
     MapRenderer.updateTerritory();
+    MapRenderer.drawAttackArrows();
     UI.updateDiplomacy();
 
     // Immediate check: did the player's country die during AI wars?
@@ -281,6 +283,7 @@ const Engine = {
     GameState.pendingTurn = true;
     UI.updateAll();
     MapRenderer.updateTerritory();
+    MapRenderer.drawAttackArrows();
 
     if (territoryChanged) {
       for (const [city, owner] of Object.entries(GameState.territory)) {
@@ -552,11 +555,13 @@ const Engine = {
       const cityChar = CITY_CHARACTERISTICS[targetCity] || {};
       GameState.addChronicle(`${attacker.name}攻取${target}之${targetCity}（${cityChar.type || '城'}）。`);
       this._addWorldEvent(`⚔ ${attacker.name}攻取${target}之${targetCity}`);
+      GameState.attackArrows.push({ from: attacker.name, to: target, city: targetCity, result: 'win' });
     } else {
       attacker.military = Math.max(0, attacker.military - 5);
       if (target === GameState.playerCountry) {
         this._addWorldEvent(`⚔ ${attacker.name}来犯${targetCity}，被我军击退`);
       }
+      GameState.attackArrows.push({ from: attacker.name, to: target, city: targetCity, result: 'lose' });
     }
   },
 
@@ -612,6 +617,9 @@ const Engine = {
               GameState.transferCity(targetCity, te.from, GameState.playerCountry);
               const cc = CITY_CHARACTERISTICS[targetCity] || {};
               GameState.addChronicle(`我军${stratBonus > 0 ? '用计' : ''}攻取${te.from}之${targetCity}（${cc.type || '城'}）！`, true);
+              GameState.attackArrows.push({ from: GameState.playerCountry, to: te.from, city: targetCity, result: 'win' });
+            } else {
+              GameState.attackArrows.push({ from: GameState.playerCountry, to: te.from, city: targetCity, result: 'lose' });
             }
           }
         }
@@ -674,7 +682,17 @@ const Engine = {
 
   endGame() {
     GameState.gameOver = true;
-    const result = Epitaph.generate();
-    UI.showEndScreen(result);
+    try {
+      const result = Epitaph.generate();
+      UI.showEndScreen(result);
+    } catch (e) {
+      UI.showEndScreen({
+        fullName: GameState.playerCountry + '王',
+        epitaphMeaning: '评价出错',
+        citiesGained: 0, countriesDestroyed: [],
+        evaluation: '游戏结束。' + (e.message || ''),
+        stars: 3, ratingText: '', legacy: '', stats: {}, generation: 1,
+      });
+    }
   }
 };
