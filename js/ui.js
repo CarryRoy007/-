@@ -117,12 +117,11 @@ const UI = {
     const continueBtn = document.getElementById('outcome-continue');
     continueBtn.style.display = 'none';
 
-    // Show heir selection buttons
-    const choices = document.getElementById('event-choices');
-    choices.style.display = 'flex';
-    choices.style.flexDirection = 'column';
-    choices.style.gap = '10px';
-    choices.innerHTML = '';
+    // Put heir buttons directly into outcome-body, after chronicle
+    const body = document.querySelector('#outcome-panel .outcome-scroll');
+    // Remove old heir buttons if any
+    const oldBtns = body.querySelectorAll('.choice-btn');
+    oldBtns.forEach(b => b.remove());
 
     const heirs = [
       { label: '立贤能的太子', desc: '太子素有贤名，继位可安社稷。', effects: { governance: 5, morale: 5 } },
@@ -133,20 +132,21 @@ const UI = {
     heirs.forEach((h, i) => {
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
+      btn.style.marginBottom = '10px';
       btn.innerHTML = `
         <span class="choice-letter">${String.fromCharCode(65 + i)}</span>
         <span class="choice-text">${h.label}</span>
         <span class="choice-hint">${h.desc}</span>
       `;
       btn.addEventListener('click', () => {
+        // Remove all heir buttons
+        body.querySelectorAll('.choice-btn').forEach(b => b.remove());
         GameState.successionPending = false;
         GameState.rulerHealth = 80 + Math.floor(Math.random() * 20);
         GameState.rulerAge = 20 + Math.floor(Math.random() * 15);
         GameState.generation++;
         GameState.applyEffects(h.effects, GameState.playerCountry);
         GameState.addChronicle(`第${GameState.generation}代嗣君即位。`);
-        choices.innerHTML = '';
-        choices.style.display = 'none';
         continueBtn.style.display = 'block';
         continueBtn.textContent = '新君即位，承继大统';
         outPanel.scrollIntoView({ behavior: 'smooth' });
@@ -158,7 +158,7 @@ const UI = {
           Engine.onContinue();
         };
       });
-      choices.appendChild(btn);
+      body.appendChild(btn);
     });
     outPanel.scrollIntoView({ behavior: 'smooth' });
   },
