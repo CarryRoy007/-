@@ -295,6 +295,60 @@ const MapRenderer = {
     }
   },
 
+  drawDiploLines() {
+    // Remove old diplomacy lines
+    this.svg.querySelectorAll('.diplo-line').forEach(el => el.remove());
+
+    const player = GameState.playerCountry;
+    const playerCap = GameState.countries[player]?.capital;
+    const playerPos = playerCap ? this._getCityPos(playerCap) : null;
+    if (!playerPos) return;
+
+    const defs = this.svg.querySelector('defs') || this.svg.insertBefore(
+      document.createElementNS("http://www.w3.org/2000/svg", "defs"), this.svg.firstChild
+    );
+
+    // Define markers if not already
+    if (!this.svg.getElementById('dipArrowGreen')) {
+      for (const [id, color] of [['dipArrowGreen', '#5ac08d'], ['dipArrowRed', '#c41e3a']]) {
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+        marker.setAttribute("id", id);
+        marker.setAttribute("viewBox", "0 0 10 10");
+        marker.setAttribute("refX", 5); marker.setAttribute("refY", 5);
+        marker.setAttribute("markerWidth", 6); marker.setAttribute("markerHeight", 6);
+        marker.setAttribute("orient", "auto");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
+        path.setAttribute("fill", color); path.setAttribute("opacity", "0.6");
+        marker.appendChild(path);
+        defs.appendChild(marker);
+      }
+    }
+
+    for (const [name] of Object.entries(GameState.countries)) {
+      if (name === player || !GameState.countries[name].alive) continue;
+      const cap = GameState.countries[name].capital;
+      const pos = cap ? this._getCityPos(cap) : null;
+      if (!pos) continue;
+
+      const rel = GameState.getRelation(player, name);
+      const isAlly = rel >= 30;
+      const isEnemy = rel <= -30;
+      if (!isAlly && !isEnemy) continue;
+
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", playerPos[0]); line.setAttribute("y1", playerPos[1]);
+      line.setAttribute("x2", pos[0]); line.setAttribute("y2", pos[1]);
+      line.setAttribute("stroke", isAlly ? '#5ac08d' : '#c41e3a');
+      line.setAttribute("stroke-width", isAlly ? '1.5' : '1');
+      line.setAttribute("stroke-opacity", '0.4');
+      line.setAttribute("stroke-dasharray", isAlly ? '4 3' : '2 3');
+      line.setAttribute("class", 'diplo-line');
+      line.setAttribute("marker-end", isAlly ? 'url(#dipArrowGreen)' : 'url(#dipArrowRed)');
+      this.svg.appendChild(line);
+    }
+  },
+
   _drawLegend() {
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     g.setAttribute("transform", "translate(8, 8)");

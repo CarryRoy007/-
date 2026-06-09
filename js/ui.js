@@ -150,6 +150,10 @@ const UI = {
     const container = document.getElementById('diplomacy-panel');
     container.innerHTML = '';
     const player = GameState.playerCountry;
+    const panelSection = document.getElementById('diplomacy-panel').parentElement;
+    const existingTitle = panelSection.querySelector('.panel-title');
+    if (existingTitle) existingTitle.textContent = '外交（绿=善 · 红=恶）';
+
     for (const [name, country] of Object.entries(GameState.countries)) {
       if (name === player) continue;
       if (!country.alive) continue;
@@ -163,13 +167,18 @@ const UI = {
 
       const div = document.createElement('div');
       div.className = `diplo-item ${statusClass}`;
+      const barWidth = Math.abs(relation);
+      const barColor = relation >= 0 ? '#5ac08d' : '#c41e3a';
       div.innerHTML = `
         <span class="diplo-country" style="color:${COUNTRIES[name].highlight}">${name}</span>
         <span class="diplo-status">${status}</span>
-        <div class="diplo-bar"><div class="diplo-fill" style="width:${Math.abs(relation)}%;background:${relation >= 0 ? '#2ecc71' : '#e74c3c'}"></div></div>
+        <span class="diplo-number" style="color:${barColor}">${relation >= 0 ? '+' : ''}${relation}</span>
+        <div class="diplo-bar"><div class="diplo-fill" style="width:${barWidth}%;background:${barColor}"></div></div>
       `;
       container.appendChild(div);
     }
+    // Draw diplomacy lines on map
+    MapRenderer.drawDiploLines();
   },
 
   showEvent(event, isCrisis = false) {
@@ -179,7 +188,17 @@ const UI = {
     const choices = document.getElementById('event-choices');
 
     title.textContent = `第${GameState.turn}回 · ${event.title}`;
-    text.textContent = event.text;
+    // Dynamic text substitution for {neighbor}/{enemy}/{ally}
+    let displayText = event.text;
+    const player = GameState.playerCountry;
+    const neighbors = GameState.getNeighbors(player);
+    const enemy = neighbors.sort((a, b) => (GameState.getRelation(player, a) || 0) - (GameState.getRelation(player, b) || 0))[0];
+    const ally = neighbors.sort((a, b) => (GameState.getRelation(player, b) || 0) - (GameState.getRelation(player, a) || 0))[0];
+    const rando = neighbors[Math.floor(Math.random() * neighbors.length)];
+    displayText = displayText.replace(/\{neighbor\}/g, rando || '邻国');
+    displayText = displayText.replace(/\{enemy\}/g, enemy || '敌国');
+    displayText = displayText.replace(/\{ally\}/g, ally || '盟国');
+    text.textContent = displayText;
     if (isCrisis) text.className = 'crisis';
     else text.className = '';
     choices.innerHTML = '';

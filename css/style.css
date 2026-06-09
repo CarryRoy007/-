@@ -420,6 +420,7 @@ body {
 .diplo-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.82rem; }
 .diplo-country { width: 28px; font-weight: bold; color: var(--gold-light); }
 .diplo-status { width: 36px; font-size: 0.72rem; }
+.diplo-number { width: 32px; font-size: 0.7rem; text-align: center; font-weight: bold; flex-shrink: 0; }
 .diplo-status.friendly { color: var(--jade); }
 .diplo-status.allied { color: var(--jade-light); }
 .diplo-status.hostile { color: var(--red); }

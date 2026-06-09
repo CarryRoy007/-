@@ -62,7 +62,7 @@ const HISTORICAL_EVENTS = [
      {text:"驳回变法，安抚旧族",effects:{morale:10,governance:-5},risk:0.05,chronicle:"驳回变法，维持旧制"},
      {text:"用其术而不用其人",effects:{governance:15,military:10},risk:0.2,chronicle:"采商鞅之术，然未留其人"}
    ]},
-  {id:"guiling_battle",year:-354,era:[1,2],condition:{countries:["赵","齐","魏"]},title:"围魏救赵·桂陵之战",
+  {id:"guiling_battle",year:-354,era:[1,2],condition:{countries:["赵","齐"]},title:"围魏救赵·桂陵之战",
    text:"魏将庞涓围赵邯郸，城危在旦夕。齐使田忌、孙膑将兵来救。孙膑曰：「夫解杂乱纷纠者不控卷，救斗者不搏撠。批亢捣虚，形格势禁，则自为解耳。」乃引兵直趋大梁，魏果释赵而自救。",
    choices:[
      {text:"重修城防，加强军备",effects:{military:10,economy:-10,governance:5},risk:0.05,chronicle:"重修邯郸城防"},
@@ -70,12 +70,30 @@ const HISTORICAL_EVENTS = [
      {text:"遣使与魏议和，各守其地",effects:{diplomacy:10,morale:5,military:-5},risk:0.1,chronicle:"与魏议和"},
      {text:"联齐抗魏，与齐结盟",effects:{diplomacy:15,military:5},risk:0.15,chronicle:"与齐结盟抗魏"}
    ]},
-  {id:"maling_battle",year:-341,era:[2,3],condition:{countries:["齐","魏"]},title:"马陵之战",
+  {id:"guiling_battle_wei",year:-354,era:[1,2],condition:{country:"魏"},title:"围赵邯郸",
+   text:"庞涓率军围赵邯郸，赵人死守不出。齐使田忌、孙膑将兵来救，不直趋邯郸，反引兵直趋大梁。若回师自救，邯郸之围自解；若拒回，大梁危矣。",
+   choices:[
+     {text:"回师自救，放弃邯郸",effects:{military:-5,governance:8,morale:5},risk:0.15,chronicle:"回师自救大梁，邯郸之围遂解"},
+     {text:"分兵两路，一守大梁一攻邯郸",effects:{military:8,economy:-10,governance:3},risk:0.35,chronicle:"分兵两路，于桂陵遭齐伏击"},
+     {text:"全力攻下邯郸，再回师大梁",effects:{military:10,economy:-12,morale:5},risk:0.45,chronicle:"攻下邯郸然桂陵兵败",
+      rulerFate:{type:"战死",chance:0.2,text:"桂陵大败，庞涓被擒",chronicle:"桂陵大败，魏军溃散"}},
+     {text:"与赵议和，保全实力",effects:{diplomacy:10,military:-3,morale:3,economy:5},risk:0.05,chronicle:"与赵议和退兵"}
+   ]},
+  {id:"maling_battle",year:-341,era:[2,3],condition:{countries:["齐"]},title:"马陵之战",
    text:"魏伐韩，齐救之。孙膑以减灶之计诱庞涓，齐军入魏地，日减其灶。庞涓大喜曰：「齐军怯，入吾地三日，士卒亡者过半。」乃弃步军，以轻骑追之。至马陵，道狭有伏兵。",
    choices:[
      {text:"依孙膑之计，设伏马陵",effects:{military:20,economy:-8,diplomacy:10},risk:0.2,chronicle:"马陵设伏，大败魏军，庞涓自刎"},
      {text:"正面决战，以力服人",effects:{military:10,economy:-15},risk:0.5,chronicle:"与魏正面决战，互有损伤"},
      {text:"围而不打，迫魏求和",effects:{diplomacy:15,military:5,economy:-5},risk:0.15,chronicle:"围魏迫和，不战而屈人之兵"}
+   ]},
+  {id:"maling_battle_wei",year:-341,era:[2,3],condition:{country:"魏"},title:"马陵之困",
+   text:"魏伐韩，齐救韩。我军深入韩地，齐军以减灶之计诱我。探马来报：齐军灶数日减，似士卒逃亡过半。庞涓请以轻骑追击。然孙膑多智，恐有诈。",
+   choices:[
+     {text:"从庞涓之计，轻骑追击",effects:{military:-20,economy:-8,morale:-10},risk:0.75,chronicle:"庞涓率轻骑入马陵道，中伏兵败自刎",
+      rulerFate:{type:"战死",chance:0.3,text:"随军督战，中伏身亡",chronicle:"魏王随军入马陵道，中伏身亡"}},
+     {text:"令庞涓撤军，勿入险地",effects:{military:5,governance:10,diplomacy:3},risk:0.1,chronicle:"令庞涓撤军，保全实力"},
+     {text:"全军压上，与齐决战",effects:{military:8,economy:-15},risk:0.5,chronicle:"与齐军主力决战，互有损伤"},
+     {text:"设伏反制，诱齐军入瓮",effects:{military:10,diplomacy:5,economy:-8},risk:0.3,chronicle:"设伏反制齐军"}
    ]},
   {id:"shangyang_death",year:-338,era:[2,3],condition:{country:"秦"},title:"商鞅之死",
    text:"秦孝公薨，太子立，是为惠文王。公子虔之徒告商君欲反，商鞅亡命不得，终被车裂。然其所行之法，已深入秦国骨髓。卿欲如何处置？",
@@ -182,12 +200,21 @@ const HISTORICAL_EVENTS = [
   // ═══════════════════════════════════════════════════════
   // 白起拔郢纪元 (id:4) - 前278年
   // ═══════════════════════════════════════════════════════
-  {id:"yueyi_attack_qi",year:-284,era:[3,4,5],condition:{countries:["燕","齐"],contextCountry:"燕",contextMinMilitary:35},title:"乐毅伐齐",
+  {id:"yueyi_attack_qi",year:-284,era:[3,4,5],condition:{country:"燕",contextCountry:"燕",contextMinMilitary:35},title:"乐毅伐齐",
    text:"燕昭王二十八年，乐毅率燕、秦、赵、魏、韩五国联军伐齐。济西大败齐师，乐毅独率燕军长驱直入，下齐七十余城，唯莒、即墨未下。齐湣王走莒。",
    choices:[
      {text:"继续围攻莒、即墨，务求全灭齐国",effects:{military:15,economy:-15,morale:5},risk:0.5,chronicle:"继续围攻齐国残余"},
      {text:"以德服人，安抚齐民",effects:{governance:15,diplomacy:10,military:-5},risk:0.2,chronicle:"安抚齐民，以德怀远"},
      {text:"见好就收，携胜果议和",effects:{diplomacy:15,economy:10,military:5},risk:0.1,chronicle:"携大胜之威与齐议和"}
+   ]},
+  {id:"yueyi_attack_qi_defense",year:-284,era:[3,4,5],condition:{country:"齐"},title:"五国伐齐·存亡之际",
+   text:"燕将乐毅率五国联军伐齐，济西大败齐师。燕军长驱直入，下齐七十余城。齐湣王走莒，只剩莒、即墨二城未陷。千里齐国，几近倾覆。寡人当何以自处？",
+   choices:[
+     {text:"死守莒城，以待天下有变",effects:{military:10,morale:15,economy:-12,governance:5},risk:0.35,chronicle:"死守莒城",
+      rulerFate:{type:"被弑",chance:0.25,text:"莒城被围数月，内奸献城",chronicle:"莒城内奸献城，齐王被杀"}},
+     {text:"遣使向楚求救，以淮北之地许之",effects:{diplomacy:12,military:8,economy:-10,morale:-5},risk:0.25,chronicle:"借楚兵抗燕"},
+     {text:"卑辞厚币向燕求和，割地称臣",effects:{diplomacy:8,morale:-18,military:-8,governance:3},risk:0.1,chronicle:"割地求和于燕"},
+     {text:"以田单守即墨，积蓄力量徐图反击",effects:{military:5,governance:10,morale:8,economy:-5},risk:0.15,chronicle:"托田单守即墨以待反击"}
    ]},
   {id:"tianjin_restore_qi",year:-279,era:[3,4,5],condition:{country:"齐"},title:"火牛复齐",
    text:"田单以即墨一城抗燕数年。乃收城中牛千余头，画以五彩龙文，角缚利刃，尾束苇灌脂。夜凿城数十穴，纵牛出，壮士五千随后。牛尾炬火，光明炫耀，燕军大骇，齐人乘胜追击。",
@@ -196,12 +223,21 @@ const HISTORICAL_EVENTS = [
      {text:"继续坚守，等待外援",effects:{military:5,morale:-5,economy:-8},risk:0.4,chronicle:"坚守即墨，苦待外援"},
      {text:"与燕议和，保全即墨",effects:{diplomacy:10,military:-10,morale:-10},risk:0.1,chronicle:"与燕议和，仅保即墨一城"}
    ]},
-  {id:"baiqi_ying",year:-278,era:[4,5],condition:{countries:["秦","楚"],contextCountry:"秦",contextMinMilitary:30},title:"白起拔郢",
+  {id:"baiqi_ying",year:-278,era:[4,5],condition:{country:"秦",contextCountry:"秦",contextMinMilitary:30},title:"白起拔郢",
    text:"秦将白起率军攻楚，决水淹鄢，军民死者数十万。遂拔郢都，烧夷陵，东至竟陵。楚王亡走陈，东迁于寿春。屈原闻之，怀石投汨罗江而死。",
    choices:[
      {text:"乘胜追击，务求灭楚",effects:{military:20,economy:-15,diplomacy:-10},risk:0.4,chronicle:"乘胜追击楚军"},
      {text:"巩固新地，设南郡而治",effects:{governance:15,economy:10,military:5},risk:0.1,chronicle:"设南郡，巩固楚地"},
      {text:"与楚议和，割地而还",effects:{diplomacy:15,economy:5,military:-5},risk:0.1,chronicle:"与楚议和，割地而还"}
+   ]},
+  {id:"baiqi_ying_chu",year:-278,era:[4,5],condition:{country:"楚"},title:"白起破郢·国都沦陷",
+   text:"秦将白起率军攻楚，决水淹鄢，军民死者数十万。郢都沦陷，夷陵被焚。我军东退至陈。屈原闻郢破，怀石投汨罗江而死。国破都丧，社稷危在旦夕。",
+   choices:[
+     {text:"东迁寿春，重整旗鼓",effects:{governance:12,morale:10,economy:-10,military:5},risk:0.1,chronicle:"东迁寿春，重整旗鼓"},
+     {text:"集结残兵，反攻收复郢都",effects:{military:15,morale:12,economy:-15},risk:0.55,chronicle:"反攻郢都",
+      rulerFate:{type:"战死",chance:0.35,text:"反攻失败，楚王战死",chronicle:"反攻郢都失败，楚王战死沙场"}},
+     {text:"向秦求和，割地求存",effects:{diplomacy:5,morale:-18,military:-8,governance:3},risk:0.1,chronicle:"割地求和于秦"},
+     {text:"联齐赵抗秦，合纵以图存",effects:{diplomacy:15,governance:5,military:5,economy:-8},risk:0.25,chronicle:"联齐赵合纵抗秦"}
    ]},
   {id:"chu_huaiwang",year:-299,era:[3,4,5],condition:{country:"楚"},title:"楚怀王入秦",
    text:"秦昭王遗书楚怀王曰：「寡人与王接境，婚姻也。愿与王会武关，面相约而去。」屈原谏曰：「秦，虎狼之国，不可信。」子兰劝王行。王入秦，秦因留之。",
@@ -239,7 +275,7 @@ const HISTORICAL_EVENTS = [
   // ═══════════════════════════════════════════════════════
   // 长平决战纪元 (id:5) - 前260年
   // ═══════════════════════════════════════════════════════
-  {id:"changping_battle",year:-260,era:[4,5],condition:{countries:["秦","赵"]},title:"长平之战",
+  {id:"changping_battle",year:-260,era:[4,5],condition:{country:"赵"},title:"长平之战",
    text:"秦攻韩上党，上党守冯亭不降秦，反以上党十七城归赵。秦怒，遣武安君白起攻赵于长平。廉颇坚壁不出，秦人不得进。然旷日持久，粮草渐匮。秦使反间曰：「秦之所畏，独赵括耳。」",
    choices:[
      {text:"信廉颇之策，继续坚守",effects:{military:10,economy:-15,morale:5},risk:0.3,chronicle:"廉颇坚守长平，秦军久攻不下"},
@@ -248,12 +284,28 @@ const HISTORICAL_EVENTS = [
      {text:"遣使求和于秦",effects:{diplomacy:10,military:-10,morale:-5},risk:0.3,chronicle:"遣使求和于秦"},
      {text:"暗联魏楚，请出兵夹击",effects:{diplomacy:15,military:5,economy:-8},risk:0.4,chronicle:"联魏楚夹击秦军"}
    ]},
-  {id:"xinling_save_zhao",year:-257,era:[4,5],condition:{countries:["魏","赵"]},title:"窃符救赵",
+  {id:"changping_battle_qin",year:-260,era:[4,5],condition:{country:"秦"},title:"长平对决",
+   text:"赵纳上党，与大秦抗衡于长平。廉颇坚壁不出，我军久攻不下，粮草日耗。范雎献反间计，使人入赵散布谣言：「秦之所畏，独赵括耳。」赵若中计，赵括代颇，可一举破之。",
+   choices:[
+     {text:"行反间计，诱赵换将",effects:{military:20,diplomacy:10,economy:-12,morale:5},risk:0.2,chronicle:"行反间计，赵以赵括代廉颇。白起围歼赵军四十万",territoryEffect:{gain:true,from:"赵"}},
+     {text:"强攻长平，与廉颇硬碰",effects:{military:8,economy:-20,morale:-5},risk:0.45,chronicle:"强攻长平与廉颇硬碰，损耗巨大"},
+     {text:"围而不打，断其粮道迫降",effects:{military:10,economy:-8,governance:5,diplomacy:5},risk:0.2,chronicle:"围长平断粮道，赵军不战自溃"},
+     {text:"收降赵卒，不事杀戮",effects:{diplomacy:15,morale:5,military:-5,governance:8},risk:0.15,chronicle:"收降赵卒，以德服人"}
+   ]},
+  {id:"xinling_save_zhao",year:-257,era:[4,5],condition:{country:"魏"},title:"窃符救赵",
    text:"长平之后，秦围邯郸。赵使平原君求救于魏。魏王使晋鄙将十万众救赵，然畏秦，驻兵不进。信陵君魏无忌欲救赵，侯嬴献窃符之计。",
    choices:[
      {text:"窃符夺军，救赵抗秦",effects:{military:15,diplomacy:20,morale:10,governance:-10},risk:0.35,chronicle:"窃符救赵，大破秦军于邯郸城下"},
      {text:"遵从王命，按兵不动",effects:{diplomacy:-15,morale:-10,military:5},risk:0.1,chronicle:"按兵不动，坐视赵国危亡"},
      {text:"劝魏王亲自下令救赵",effects:{diplomacy:10,military:5,morale:5},risk:0.3,chronicle:"力谏魏王救赵"}
+   ]},
+  {id:"xinling_save_zhao_2",year:-257,era:[4,5],condition:{country:"赵"},title:"邯郸之围",
+   text:"长平大败之后，秦军围邯郸。城中粮尽，百姓易子而食。平原君赴魏求救，魏王畏秦，令晋鄙驻军不进。信陵君欲窃符夺军来救，然魏王心意未决。寡人当何以自保？",
+   choices:[
+     {text:"拼死守住邯郸，等待魏援",effects:{military:12,morale:15,economy:-18},risk:0.35,chronicle:"死守邯郸，终得魏援解围"},
+     {text:"遣使卑辞厚币向秦求和",effects:{diplomacy:5,morale:-18,military:-10,governance:3},risk:0.2,chronicle:"向秦割地求和"},
+     {text:"散布谣言：魏援已至，激励全城死战",effects:{military:15,morale:10,economy:-10},risk:0.3,chronicle:"虚张声势激励守军，秦军暂退"},
+     {text:"令平原君再促魏王，不吝割地",effects:{diplomacy:10,military:8,economy:-12,morale:5},risk:0.25,chronicle:"许魏重利请援"}
    ]},
   {id:"jingke_assassination",year:-227,era:[5,6],condition:{country:"燕"},title:"荆轲刺秦",
    text:"太子丹质于秦，秦王遇之不善，丹亡归。欲报秦仇，得刺客荆轲。以秦舞阳为副，携樊於期之首、督亢之图，入秦献之。图穷匕见，事败身死。",
@@ -379,7 +431,7 @@ const HISTORICAL_EVENTS = [
   // 通用历史事件（多国共享，跨纪元）— 使游戏内容充实
   // ═══════════════════════════════════════════════════════
   {id:"shared_diplomatic_crisis",year:-380,era:[1,2,3,4,5,6],condition:{countries:["秦","齐","楚","赵","魏","韩","燕"]},title:"列国外交危机",
-   text:"邻国与远方大国结盟，对我形成犄角之势。朝臣议论纷纷：有人主张瓦解对方同盟，有人主张寻求新的盟友，亦有人主张先发制人以打破包围。",
+   text:"{enemy}与远方大国结盟，对我形成犄角之势。朝臣议论纷纷：有人主张瓦解对方同盟，有人主张寻求新的盟友，亦有人主张先发制人以打破包围。",
    choices:[
      {text:"遣使离间，瓦解敌方同盟",effects:{diplomacy:15,military:-3,economy:-5},risk:0.2,chronicle:"遣使离间敌方同盟"},
      {text:"拉拢远方大国，形成反包围",effects:{diplomacy:12,economy:-8,military:3},risk:0.15,chronicle:"拉拢远方大国"},
@@ -387,7 +439,7 @@ const HISTORICAL_EVENTS = [
      {text:"示弱于敌，暗中整军备战",effects:{military:8,diplomacy:5,morale:-3},risk:0.1,chronicle:"示弱于敌，暗中备战"}
    ]},
   {id:"shared_war_rumor",year:-360,era:[1,2,3,4,5,6],condition:{countries:["秦","齐","楚","赵","魏","韩","燕"]},title:"边境风声鹤唳",
-   text:"探马报：邻国在边境集结重兵，似有犯境之意。群臣议论纷纷，有请战者，有主和者，亦有主张固守者。实情如何，尚无确凿证据。",
+   text:"探马报：{enemy}在边境集结重兵，似有犯境之意。群臣议论纷纷，有请战者，有主和者，亦有主张固守者。实情如何，尚无确凿证据。",
    choices:[
      {text:"集结大军，对峙边境",effects:{military:12,economy:-10,diplomacy:-5},risk:0.2,chronicle:"集结大军对峙边境"},
      {text:"遣使询问，表明善意",effects:{diplomacy:12,military:-3,morale:5},risk:0.1,chronicle:"遣使询问边境事宜"},
@@ -395,7 +447,7 @@ const HISTORICAL_EVENTS = [
      {text:"佯装不知，暗中布置伏兵",effects:{military:10,diplomacy:5,governance:-3},risk:0.25,chronicle:"暗中布置伏兵"}
    ]},
   {id:"shared_trade_dispute",year:-340,era:[1,2,3,4,5,6],condition:{countries:["秦","齐","楚","赵","魏","韩","燕"]},title:"商路之争",
-   text:"我国商旅在邻国边境被扣押，货物被没收。商人联名上书请朝廷做主。对方声称我商旅违反当地法令。此事若处理不当，恐引发冲突。",
+   text:"我国商旅在{neighbor}边境被扣押，货物被没收。商人联名上书请朝廷做主。对方声称我商旅违反当地法令。此事若处理不当，恐引发冲突。",
    choices:[
      {text:"遣使严正交涉，要求赔偿",effects:{diplomacy:8,morale:8,economy:5},risk:0.15,chronicle:"遣使严正交涉商旅之事"},
      {text:"直接报复，扣押对方商人",effects:{economy:10,diplomacy:-12,morale:3},risk:0.25,chronicle:"以牙还牙扣押对方商人"},
@@ -411,7 +463,7 @@ const HISTORICAL_EVENTS = [
      {text:"令两派各治国事以观其效",effects:{governance:12,diplomacy:5,risk:0.2},risk:0.2,chronicle:"两派各治国事"}
    ]},
   {id:"shared_succession_foreign",year:-300,era:[1,2,3,4,5,6],condition:{countries:["秦","齐","楚","赵","魏","韩","燕"]},title:"邻国嗣君之变",
-   text:"邻国老君薨逝，新君年少即位，国势动荡。有大臣以为此乃天赐良机，主张趁机出兵；也有人以为此时出兵恐失道义于天下。",
+   text:"{neighbor}国君薨逝，新君年少即位，国势动荡。有大臣以为此乃天赐良机，主张趁机出兵；也有人以为此时出兵恐失道义于天下。",
    choices:[
      {text:"趁机出兵，攻城略地",effects:{military:15,economy:-10,diplomacy:-12,morale:-5},risk:0.3,chronicle:"趁邻国丧君出兵",territoryEffect:{gain:true,from:"韩"}},
      {text:"遣使吊唁，示以善意",effects:{diplomacy:15,morale:5,governance:3},risk:0.05,chronicle:"遣使吊唁邻国新君"},
@@ -436,7 +488,7 @@ const HISTORICAL_EVENTS = [
      {text:"将后宫干政者遣送离宫",effects:{governance:10,morale:5,diplomacy:3},risk:0.15,chronicle:"遣送后宫干政者"}
    ]},
   {id:"shared_assassination_attempt",year:-240,era:[1,2,3,4,5,6],condition:{countries:["秦","齐","楚","赵","魏","韩","燕"]},title:"刺杀未遂",
-   text:"王于宫中宴饮，忽有刺客自梁上跃下，持刃直向王座。幸得侍卫奋不顾身，刺客未能得逞。然主谋者谁？是敌国奸细？还是朝中政敌？",
+   text:"王于宫中宴饮，忽有刺客自梁上跃下，持刃直向王座。幸得侍卫奋不顾身，刺客未能得逞。然主谋者谁？是{enemy}奸细？还是朝中政敌？",
    choices:[
      {text:"严刑拷问刺客，追查幕后",effects:{governance:12,military:5,morale:3},risk:0.15,chronicle:"追查刺杀幕后"},
      {text:"借此事大清洗，清除异己",effects:{governance:8,military:5,morale:-12},risk:0.25,chronicle:"借刺杀之事清除异己",
@@ -462,7 +514,7 @@ const HISTORICAL_EVENTS = [
      {text:"封存技术，秘密研发",effects:{military:8,governance:5},risk:0.05,chronicle:"秘密研发新兵器"}
    ]},
   {id:"shared_refugee_crisis",year:-180,era:[1,2,3,4,5,6],condition:{countries:["秦","齐","楚","赵","魏","韩","燕"]},title:"流民入国",
-   text:"邻国因战乱天灾，大批流民涌入我国边境。流民中混杂着不少青壮年，亦有不法之徒。边将请旨如何处置？",
+   text:"{neighbor}因战乱天灾，大批流民涌入我国边境。流民中混杂着不少青壮年，亦有不法之徒。边将请旨如何处置？",
    choices:[
      {text:"开边境接纳流民，编户齐民",effects:{economy:12,morale:10,governance:-5},risk:0.1,chronicle:"接纳流民编户"},
      {text:"只选青壮年入伍，余者遣返",effects:{military:12,economy:-3,morale:-5},risk:0.1,chronicle:"精选流民入伍"},
@@ -470,7 +522,7 @@ const HISTORICAL_EVENTS = [
      {text:"令流民屯田开荒，自食其力",effects:{economy:10,governance:8,military:-3},risk:0.1,chronicle:"令流民屯田"}
    ]},
   {id:"shared_secret_alliance",year:-160,era:[1,2,3,4,5,6],condition:{countries:["秦","齐","楚","赵","魏","韩","燕"]},title:"秘密盟约",
-   text:"有邻国密使深夜来访，言愿与我国结为秘密同盟，共同对付第三方。使者带来盟书与厚礼，然此事若败露，我国将面临极大外交压力。",
+   text:"{neighbor}密使深夜来访，言愿与我国结为秘密同盟，共同对付第三方。使者带来盟书与厚礼，然此事若败露，我国将面临极大外交压力。",
    choices:[
      {text:"欣然签约，结秘密盟约",effects:{diplomacy:12,military:10,governance:-5},risk:0.25,chronicle:"缔结秘密同盟"},
      {text:"婉拒密约，保持公开外交",effects:{diplomacy:-5,morale:5},risk:0.0,chronicle:"婉拒秘密盟约"},
@@ -532,7 +584,7 @@ const RANDOM_EVENTS = [
      {text:"分化瓦解，各个击破",effects:{governance:8,diplomacy:5},risk:0.2,chronicle:"分化瓦解叛乱势力"}
    ]},
   {id:"random_alliance",type:"外交",title:"邻国求盟",
-   text:"邻国遣使来朝，愿与我国结为盟好，共抗强敌。使者言辞恳切，携厚礼而来。",
+   text:"{neighbor}遣使来朝，愿与我国结为盟好，共抗强敌。使者言辞恳切，携厚礼而来。",
    choices:[
      {text:"欣然接受，缔结同盟",effects:{diplomacy:15,military:5,economy:-5},risk:0.1,chronicle:"与邻国缔结同盟"},
      {text:"接受结盟，但要求对方割城为质",effects:{diplomacy:10,economy:10,military:5},risk:0.25,chronicle:"以割城为条件结盟"},
@@ -574,7 +626,7 @@ const RANDOM_EVENTS = [
      {text:"封存矿脉，以备后用",effects:{governance:3},risk:0.0,chronicle:"封存矿脉"}
    ]},
   {id:"random_marriage",type:"外交",title:"联姻之议",
-   text:"邻国遣使求亲，欲与我国联姻。若许之，两国关系可进一步；然亦恐对方借联姻之名行渗透之实。",
+   text:"{neighbor}遣使求亲，欲与我国联姻。若许之，两国关系可进一步；然亦恐对方借联姻之名行渗透之实。",
    choices:[
      {text:"许以联姻，加强邦交",effects:{diplomacy:15,morale:5},risk:0.1,chronicle:"与邻国联姻"},
      {text:"婉拒联姻，保持距离",effects:{diplomacy:-5,morale:3},risk:0.0,chronicle:"婉拒联姻"},
