@@ -1,6 +1,15 @@
 # 战国：君王一念
 
 <p align="center">
+  <img src="https://img.shields.io/badge/类型-历史策略回合制-orange">
+  <img src="https://img.shields.io/badge/时代-战国七雄-red">
+  <img src="https://img.shields.io/badge/玩法-选择题驱动-blue">
+  <img src="https://img.shields.io/badge/纯前端-零依赖-brightgreen">
+</p>
+
+> **关于本作**：扮演战国七雄之一的君主，在 6 个纪元中自由开局，经历 80 回合的权谋、战争与改革。每个选择都是基于现实的妥协——没有标准答案，只有后果。攻城略地，合纵连横，或死于暗杀，或传位后世。最终，太史公为你盖棺定论。
+
+<p align="center">
   <b>一念裂土封疆，一念国破家亡。</b>
 </p>
 
