@@ -213,10 +213,19 @@ const UI = {
           const arrow = v > 0 ? '↑' : '↓';
           return `${labels[k] || k}${arrow}`;
         }).join(' ');
+      // Dynamic risk display
+      const p = GameState.getPlayer();
+      const dynRisk = choice.risk ? calcDynamicRisk(choice.risk, p, GameState.characters) : 0;
+      let riskLabel = '';
+      if (choice.risk > 0) {
+        const riskPct = Math.round(dynRisk * 100);
+        const riskColor = dynRisk > 0.4 ? '#c41e3a' : dynRisk > 0.2 ? '#b8860b' : '#5ac08d';
+        riskLabel = `<span class="choice-risk" style="color:${riskColor}">风险${riskPct}%</span>`;
+      }
       btn.innerHTML = `
         <span class="choice-letter">${String.fromCharCode(65 + idx)}</span>
         <span class="choice-text">${choice.text}</span>
-        <span class="choice-hint">${effectHints}</span>
+        <span class="choice-hint">${effectHints} ${riskLabel}</span>
       `;
       btn.addEventListener('click', () => {
         document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);

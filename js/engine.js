@@ -162,8 +162,11 @@ const Engine = {
     const citiesBefore = GameState.getCityCount(GameState.playerCountry);
     const territoryBefore = { ...GameState.territory };
 
+    const player = GameState.getPlayer();
+    const dynamicRisk = calcDynamicRisk(choice.risk || 0, player, GameState.characters);
+
     const roll = Math.random();
-    const success = roll > (choice.risk || 0);
+    const success = roll > dynamicRisk;
 
     let applied = {};
     if (success) {
