@@ -84,7 +84,7 @@ const Epitaph = {
       ? `「${mainEpitaph}」— ${mainMeaning}\n「${subEpitaph}」— ${this._getSubMeaning(subEpitaph)}`
       : `「${mainEpitaph}」— ${mainMeaning}`;
 
-    const evaluation = this._generateEvaluation(stats, citiesGained, countriesDestroyed, turn, country, mainEpitaph, subEpitaph);
+    const     evaluation = this._generateEvaluation(stats, citiesGained, countriesDestroyed, turn, country, mainEpitaph, subEpitaph, alive);
     legacyText = this._generateLegacy(stats, citiesGained, countriesDestroyed, country, mainEpitaph, avgStat, stars);
 
     return {
@@ -103,7 +103,7 @@ const Epitaph = {
     return m[sub] || '';
   },
 
-  _generateEvaluation(stats, citiesGained, countriesDestroyed, turn, country, mainEpitaph, subEpitaph) {
+  _generateEvaluation(stats, citiesGained, countriesDestroyed, turn, country, mainEpitaph, subEpitaph, alive) {
     const decisions = GameState.keyDecisions.slice(-3);
     const fate = GameState.rulerFate;
     const avgStat = Object.values(stats).reduce((a, b) => a + b, 0) / 5;
@@ -111,25 +111,28 @@ const Epitaph = {
 
     // Opening
     const eraYear = GameState.year;
-    text += `太史公曰：${country}君起于${eraYear < 0 ? '前' + Math.abs(eraYear) + '年' : eraYear + '年'}，在位${turn * 3}载。`;
+    if (!alive) {
+      text += `太史公曰：${country}自${eraYear < 0 ? '前' + Math.abs(eraYear) + '年' : eraYear + '年'}立国，传世数代，然至王而亡。`;
+      text += `其军不修，其政不举，外交失策，终致覆灭。`;
+    } else {
+      text += `太史公曰：${country}君起于${eraYear < 0 ? '前' + Math.abs(eraYear) + '年' : eraYear + '年'}，在位${turn * 3}载。`;
+    }
 
-    // Military
+    // Military, Economy, etc.
     if (stats.military >= 80) text += '其军也，威震列国，诸侯畏服。';
     else if (stats.military >= 60) text += '其军也，能守社稷，未尝大败。';
     else if (stats.military >= 40) text += '其军也，屡战屡北，仅保疆土。';
-    else text += '其军也，不堪一击，城邑日削。';
+    else text += !alive ? '其军也，不堪一击。' : '其军也，不堪一击，城邑日削。';
 
-    // Economy
     if (stats.economy >= 80) text += '其政也，府库充盈，百姓殷富。';
     else if (stats.economy >= 60) text += '其政也，财用不乏，赋税有度。';
     else if (stats.economy >= 40) text += '其政也，国用常绌，民生凋敝。';
-    else text += '其政也，库空如洗，饥馑四起。';
+    else text += !alive ? '其政也，库空如洗。' : '其政也，库空如洗，饥馑四起。';
 
-    // Diplomacy
     if (stats.diplomacy >= 80) text += '其交也，折冲樽俎，诸侯信服。';
     else if (stats.diplomacy >= 60) text += '其交也，周旋列国，不失大体。';
     else if (stats.diplomacy >= 40) text += '其交也，孤立无援，四面楚歌。';
-    else text += '其交也，举世皆敌，无一可恃。';
+    else text += !alive ? '其交也，举世皆敌。' : '其交也，举世皆敌，无一可恃。';
 
     // Ruler character
     if (avgStat >= 75) text += '君明臣贤，政通人和。';
@@ -153,7 +156,9 @@ const Epitaph = {
 
     // Verdict
     text += `论曰：`;
-    if (mainEpitaph === '武' || mainEpitaph === '桓') text += '其才足以济世，其威足以服远，虽不及尧舜，亦一时之杰也。';
+    if (!alive || mainEpitaph === '愍') {
+      text += '国破家亡，社稷不祀。呜呼！一失足成千古恨，再回头已百年身。';
+    } else if (mainEpitaph === '武' || mainEpitaph === '桓') text += '其才足以济世，其威足以服远，虽不及尧舜，亦一时之杰也。';
     else if (mainEpitaph === '文' || mainEpitaph === '明' || mainEpitaph === '宣') text += '守文继体，以德服人，虽无赫赫武功，然社稷赖之。';
     else if (mainEpitaph === '景' || mainEpitaph === '惠' || mainEpitaph === '定') text += '宽仁爱民，恭俭有度，然中道崩殂，未竟其志。';
     else if (mainEpitaph === '安' || mainEpitaph === '康' || mainEpitaph === '简') text += '循规蹈矩，无功无过。史家谓之"守成令主"。';
@@ -169,10 +174,14 @@ const Epitaph = {
     let text = '';
     const totalCities = Object.keys(GameState.territory).length;
     const eraName = GameState.era ? GameState.era.name : '战国';
+    const alive = GameState.countries[country]?.alive;
 
     text += `【后世影响】\n\n`;
 
-    if (citiesGained >= totalCities * 0.8) {
+    // Fallen monarchs: first priority
+    if (!alive || mainEpitaph === '愍') {
+      text += `《${country}世家》载：${country}${mainEpitaph}王在位期间，社稷倾覆，宗庙不祀。后世史家论及此段，多扼腕而叹。或曰：\'大争之世，不进则退。${country}之亡，非天时也，在人事也。\'盖其失于审时度势，或轻信虎狼，或刚愎自用，终致国破身灭。千秋之下，犹为殷鉴。`;
+    } else if (citiesGained >= totalCities * 0.8) {
       text += `《${country}世家》载：${country}${mainEpitaph}王起于${eraName}，席卷天下，包举宇内。后世史家论其功过，或曰：\'苦心孤诣，终成大业。然其暴虐之政，亦为秦所承，二世而亡，岂非天意？\'`;
     } else if (citiesGained >= totalCities * 0.4) {
       text += `《${country}世家》载：${country}${mainEpitaph}王，${eraName}中雄主也。虽未一统，然其所创制度、所辟疆土，为后世子孙奠定了争霸之基。其用人之道、治军之法，尤为后代所效。`;
