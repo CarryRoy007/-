@@ -8,9 +8,26 @@ const Engine = {
   },
 
   nextTurn() {
-    if (GameState.gameOver) return;
+    if (GameState.gameOver || GameState.successionPending) return;
     GameState.turn++;
     GameState.year += 3;
+    GameState.rulerAge += 3;
+
+    // Health decay: aging + exertion
+    let decay = 1 + Math.floor(GameState.rulerAge / 20);
+    if (GameState.getPlayer().military > 70) decay += 1;
+    GameState.rulerHealth = Math.max(0, GameState.rulerHealth - decay);
+
+    // Health crisis → succession
+    if (GameState.rulerHealth <= 10 && !GameState.successionPending) {
+      GameState.successionPending = true;
+      GameState.addChronicle(`王疾笃，命在旦夕。`);
+      UI.updateAll();
+      UI.hideOutcome();
+      UI.showSuccession();
+      GameState.save();
+      return;
+    }
 
     this._checkCharacters();
     GameState.worldEvents = [];
@@ -170,8 +187,14 @@ const Engine = {
 
     let applied = {};
     if (success) {
-      GameState.applyEffects(choice.effects, GameState.playerCountry);
-      applied = { ...choice.effects };
+      // High risk = high reward: amplify effects
+      const amp = dynamicRisk > 0.5 ? 1.35 : dynamicRisk > 0.25 ? 1.15 : 1.0;
+      const boosted = {};
+      for (const [k, v] of Object.entries(choice.effects)) {
+        boosted[k] = Math.round(v * amp);
+      }
+      GameState.applyEffects(boosted, GameState.playerCountry);
+      applied = { ...boosted };
     } else {
       const penalty = {};
       for (const [key, val] of Object.entries(choice.effects)) {

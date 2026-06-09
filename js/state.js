@@ -2,7 +2,7 @@ const GameState = {
   era: null,
   year: 0,
   turn: 0,
-  maxTurns: 40,
+  maxTurns: 80,
   playerCountry: "",
   countries: {},
   characters: [],
@@ -17,13 +17,18 @@ const GameState = {
   triggeredEvents: [],
   triggeredRandomEvents: [],
   rulerFate: null,
+  rulerHealth: 100,
+  rulerAge: 40,
+  generation: 1,
+  dynastyName: "",
+  successionPending: false,
 
   init(eraId, countryName) {
     const era = ERAS.find(e => e.id === eraId);
     this.era = era;
     this.year = era.year;
     this.turn = 0;
-    this.maxTurns = 40;
+    this.maxTurns = 80;
     this.playerCountry = countryName;
     this.gameOver = false;
     this.chronicle = [];
@@ -31,6 +36,11 @@ const GameState = {
     this.triggeredEvents = [];
     this.triggeredRandomEvents = [];
     this.rulerFate = null;
+    this.rulerHealth = 100;
+    this.rulerAge = 40;
+    this.generation = 1;
+    this.dynastyName = countryName;
+    this.successionPending = false;
     this.warLog = [];
     this.currentEvent = null;
     this.characters = [];

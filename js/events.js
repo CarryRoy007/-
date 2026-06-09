@@ -838,7 +838,40 @@ const RANDOM_EVENTS = [
      {text:"绕道上游，安全渡河",effects:{military:5,economy:-5,governance:3},risk:0.1,chronicle:"绕道上游渡河"},
      {text:"隔河对峙，待敌先动",effects:{military:3,economy:-8},risk:0.15,chronicle:"隔河对峙"},
      {text:"佯装强渡正面，暗遣偏师从下游偷袭",effects:{military:14,economy:-8,diplomacy:-5},risk:0.3,chronicle:"声东击西渡河",
-      territoryEffect:{gain:true,from:"魏"}}
+       territoryEffect:{gain:true,from:"魏"}}
+    ]},
+  {id:"random_mil_patrol",type:"战争",title:"边境巡防",
+   text:"边将请增派巡防兵士，加强边境守备。近来边境小股敌军骚扰频繁，虽未大举入侵，然边民不堪其扰。增派巡防耗费国帑，却可防患未然。",
+   choices:[
+     {text:"增派巡防，稳固边境",effects:{military:5,governance:5,economy:-5},risk:0.05,chronicle:"增派边境巡防"},
+     {text:"令地方自行招募乡勇",effects:{military:3,governance:-3,economy:3},risk:0.1,chronicle:"地方招募乡勇守边"},
+     {text:"调动主力部队震慑",effects:{military:10,economy:-8,diplomacy:-5},risk:0.15,chronicle:"主力震慑边境"},
+     {text:"遣使责问，以外交解决",effects:{diplomacy:8,military:-3},risk:0.1,chronicle:"以外交解决边境骚扰"}
+   ]},
+  {id:"random_mil_train",type:"战争",title:"练兵之议",
+   text:"有将建议在全国推行严格军训，征召青壮年定期操练，以此提高军力。然此议若行，农耕将受影响，百姓亦有怨言。",
+   choices:[
+     {text:"全面推行军训",effects:{military:15,economy:-8,morale:-5,governance:5},risk:0.1,chronicle:"全面推行军训"},
+     {text:"只在边郡推行",effects:{military:8,economy:-3,morale:-3},risk:0.05,chronicle:"边郡推行军训"},
+     {text:"以赏代罚，鼓励自愿习武",effects:{military:5,economy:-3,morale:5},risk:0.05,chronicle:"鼓励自愿习武"},
+     {text:"维持现状，以农为本",effects:{economy:5,military:-3},risk:0.0,chronicle:"维持农本政策"}
+   ]},
+  {id:"random_mil_fortress",type:"战争",title:"修筑关隘",
+   text:"有大臣建议在边境险要处修筑关隘堡垒，以御外敌。工程浩大，役民数万，然关隘一成，边境可固守百年。",
+   choices:[
+     {text:"大兴土木，修筑险关",effects:{military:10,governance:8,economy:-15,morale:-3},risk:0.1,chronicle:"修筑边境关隘"},
+     {text:"先修最险要处",effects:{military:6,governance:5,economy:-8},risk:0.05,chronicle:"修筑最险要关隘"},
+     {text:"以兵力代替关隘",effects:{military:8,economy:3,governance:-3},risk:0.1,chronicle:"以兵力戍边替代关隘"},
+     {text:"国库不支，暂不修筑",effects:{economy:3,military:-3},risk:0.0,chronicle:"暂不修筑关隘"}
+   ]},
+  {id:"random_mil_scout",type:"战争",title:"探子回报",
+   text:"派往{enemy}的探子回报，敌国正在秘密调集粮草，恐有大举。然消息尚未确认。若属实，当先发制人；若虚惊一场，轻举妄动反为不美。",
+   choices:[
+     {text:"先发制人，突袭敌境",effects:{military:12,diplomacy:-15,economy:-8},risk:0.35,chronicle:"先发制人突袭敌境",
+      territoryEffect:{gain:true,from:"韩"}},
+     {text:"集结重兵，严阵以待",effects:{military:8,economy:-10,governance:5},risk:0.1,chronicle:"集结重兵严阵以待"},
+     {text:"增派探子，再行确认",effects:{governance:5,diplomacy:3},risk:0.05,chronicle:"增派探子核实情报"},
+     {text:"遣使示好，以缓其谋",effects:{diplomacy:10,military:-3,economy:-3},risk:0.15,chronicle:"遣使示好缓和局势"}
    ]},
 ];
 

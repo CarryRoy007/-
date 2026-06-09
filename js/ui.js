@@ -82,15 +82,85 @@ const UI = {
 
     const healthEl = document.getElementById('header-health');
     if (healthEl) {
-      const avgStat = (player.military + player.economy + player.governance + player.morale + player.diplomacy) / 5;
-      let healthText = '康健';
-      let healthColor = '#2ecc71';
-      if (avgStat < 30) { healthText = '危殆'; healthColor = '#e74c3c'; }
-      else if (avgStat < 45) { healthText = '虚弱'; healthColor = '#f39c12'; }
-      else if (avgStat < 60) { healthText = '尚可'; healthColor = '#3498db'; }
-      healthEl.textContent = `国运：${healthText}`;
-      healthEl.style.color = healthColor;
+      const h = GameState.rulerHealth || 100;
+      let hText = '康健', hColor = '#2ecc71';
+      if (h < 25) { hText = '垂危'; hColor = '#c41e3a'; }
+      else if (h < 50) { hText = '抱恙'; hColor = '#f39c12'; }
+      else if (h < 70) { hText = '尚可'; hColor = '#3498db'; }
+      healthEl.textContent = `龙体：${hText} ${GameState.generation > 1 ? '· 第' + GameState.generation + '代' : ''}`;
+      healthEl.style.color = hColor;
     }
+
+    const avgStat = (player.military + player.economy + player.governance + player.morale + player.diplomacy) / 5;
+    let healthText = '康健', healthColor = '#2ecc71';
+    if (avgStat < 30) { healthText = '危殆'; healthColor = '#e74c3c'; }
+    else if (avgStat < 45) { healthText = '虚弱'; healthColor = '#f39c12'; }
+    else if (avgStat < 60) { healthText = '尚可'; healthColor = '#3498db'; }
+    // No longer needed — replaced by rulerHealth above
+  },
+
+  showSuccession() {
+    const outPanel = document.getElementById('outcome-panel');
+    const evtPanel = document.getElementById('event-panel');
+    evtPanel.style.display = 'none';
+    outPanel.style.display = 'block';
+
+    document.getElementById('outcome-verdict-text').textContent = '王疾大渐，宜立嗣君。';
+    document.getElementById('outcome-verdict-text').style.color = '#c9a84c';
+
+    document.getElementById('outcome-chronicle').textContent = '王病日笃，太医束手。国不可一日无君，当择贤嗣以继社稷。';
+
+    document.getElementById('outcome-stats').innerHTML = '';
+    document.getElementById('outcome-territory').innerHTML = '';
+    document.getElementById('outcome-fate').innerHTML = '';
+
+    const continueBtn = document.getElementById('outcome-continue');
+    continueBtn.style.display = 'none';
+
+    // Show heir selection buttons
+    const choices = document.getElementById('event-choices');
+    choices.style.display = 'flex';
+    choices.style.flexDirection = 'column';
+    choices.style.gap = '10px';
+    choices.innerHTML = '';
+
+    const heirs = [
+      { label: '立贤能的太子', desc: '太子素有贤名，继位可安社稷。', effects: { governance: 5, morale: 5 } },
+      { label: '立勇武的公子', desc: '公子善战，继位可扬国威。', effects: { military: 8, governance: -3 } },
+      { label: '择外戚扶持幼主', desc: '幼主年少，以外戚辅政，权倾朝野。', effects: { military: -5, governance: 3, diplomacy: 5 } },
+    ];
+
+    heirs.forEach((h, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `
+        <span class="choice-letter">${String.fromCharCode(65 + i)}</span>
+        <span class="choice-text">${h.label}</span>
+        <span class="choice-hint">${h.desc}</span>
+      `;
+      btn.addEventListener('click', () => {
+        GameState.successionPending = false;
+        GameState.rulerHealth = 80 + Math.floor(Math.random() * 20);
+        GameState.rulerAge = 20 + Math.floor(Math.random() * 15);
+        GameState.generation++;
+        GameState.applyEffects(h.effects, GameState.playerCountry);
+        GameState.addChronicle(`第${GameState.generation}代嗣君即位。`);
+        choices.innerHTML = '';
+        choices.style.display = 'none';
+        continueBtn.style.display = 'block';
+        continueBtn.textContent = '新君即位，承继大统';
+        outPanel.scrollIntoView({ behavior: 'smooth' });
+
+        continueBtn.onclick = () => {
+          UI.hideOutcome();
+          continueBtn.textContent = '史笔留此，君王珍重';
+          GameState.pendingTurn = true;
+          Engine.onContinue();
+        };
+      });
+      choices.appendChild(btn);
+    });
+    outPanel.scrollIntoView({ behavior: 'smooth' });
   },
 
   updateStats() {
@@ -213,19 +283,20 @@ const UI = {
           const arrow = v > 0 ? '↑' : '↓';
           return `${labels[k] || k}${arrow}`;
         }).join(' ');
-      // Dynamic risk display
+      // Vague risk hint — no numbers, only descriptors
       const p = GameState.getPlayer();
       const dynRisk = choice.risk ? calcDynamicRisk(choice.risk, p, GameState.characters) : 0;
       let riskLabel = '';
+      let riskClass = '';
       if (choice.risk > 0) {
-        const riskPct = Math.round(dynRisk * 100);
-        const riskColor = dynRisk > 0.4 ? '#c41e3a' : dynRisk > 0.2 ? '#b8860b' : '#5ac08d';
-        riskLabel = `<span class="choice-risk" style="color:${riskColor}">风险${riskPct}%</span>`;
+        if (dynRisk > 0.5) { riskLabel = '险'; riskClass = 'risk-high'; }
+        else if (dynRisk > 0.25) { riskLabel = '慎'; riskClass = 'risk-mid'; }
+        else { riskLabel = '可'; riskClass = 'risk-low'; }
       }
       btn.innerHTML = `
         <span class="choice-letter">${String.fromCharCode(65 + idx)}</span>
         <span class="choice-text">${choice.text}</span>
-        <span class="choice-hint">${effectHints} ${riskLabel}</span>
+        <span class="choice-hint">${effectHints} ${riskLabel ? `<span class="choice-risk ${riskClass}">${riskLabel}</span>` : ''}</span>
       `;
       btn.addEventListener('click', () => {
         document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
@@ -397,6 +468,8 @@ const UI = {
         ${fateHtml}
         <div class="epitaph-divider"></div>
         <div class="epitaph-evaluation">${result.evaluation}</div>
+        <div class="epitaph-divider"></div>
+        <div class="epitaph-legacy">${result.legacy}</div>
         <div class="epitaph-divider"></div>
         <div class="epitaph-rating">${'★'.repeat(result.stars)}${'☆'.repeat(5 - result.stars)}</div>
         <div class="epitaph-rating-text">${result.ratingText}</div>
