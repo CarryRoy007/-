@@ -195,7 +195,6 @@ zhan-guo-strategy/
 │   ├── chronicle.js    # 史书回放
 │   ├── save.js         # localStorage 存档
 │   └── app.js          # 入口逻辑
-└── .github/workflows/  # GitHub Pages 自动部署
 ```
 
 ### 7.2 关键规则
@@ -210,8 +209,3 @@ zhan-guo-strategy/
 - 历史人物：≥50 个，按真实年份出生死亡登场
 - 特殊奇遇人物：7 国各 ≥4 个，随机事件概率触发
 - 城池：≥80 个，每个有独立特性和多边形
-
-## 九、部署方式
-- GitHub Pages 自动部署（gh-pages 分支）
-- SSH 推送（公司网络可能屏蔽 HTTPS）
-- 详见 `~/.config/opencode/skills/github-ssh-setup/SKILL.md`
