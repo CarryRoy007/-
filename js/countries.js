@@ -164,3 +164,64 @@ const CITY_CONNECTIONS = [
 ];
 
 const SEASONS = ["春","夏","秋","冬"];
+
+// 城池特性 — defense(城防1-10), importance(重要性1-10), type(类型)
+const CITY_CHARACTERISTICS = {
+  // 秦 — 西陲要塞密集
+  "咸阳":{defense:9,importance:10,type:"都城"}, "雍城":{defense:8,importance:7,type:"旧都"},
+  "栎阳":{defense:6,importance:6,type:"要塞"}, "蓝田":{defense:5,importance:5,type:"关口"},
+  "郑":{defense:7,importance:7,type:"边城"}, "汉中":{defense:7,importance:8,type:"粮仓"},
+  "南郑":{defense:5,importance:5,type:"边城"}, "武城":{defense:6,importance:5,type:"要塞"},
+  "商於":{defense:8,importance:8,type:"关口"}, "义渠":{defense:4,importance:3,type:"边城"},
+  // 赵 — 北疆要塞
+  "邯郸":{defense:8,importance:10,type:"都城"}, "晋阳":{defense:9,importance:8,type:"重镇"},
+  "代":{defense:6,importance:5,type:"边城"}, "中牟":{defense:5,importance:5,type:"普通"},
+  "蔺":{defense:6,importance:6,type:"边城"}, "离石":{defense:5,importance:5,type:"边城"},
+  "阏与":{defense:7,importance:7,type:"险关"}, "长平":{defense:8,importance:9,type:"险关"},
+  "上党":{defense:7,importance:9,type:"重镇"}, "房子":{defense:4,importance:4,type:"普通"},
+  // 魏 — 中原四战
+  "大梁":{defense:6,importance:10,type:"都城"}, "安邑":{defense:7,importance:8,type:"旧都"},
+  "邺":{defense:5,importance:6,type:"重镇"}, "河内":{defense:5,importance:7,type:"粮仓"},
+  "少梁":{defense:8,importance:7,type:"关口"}, "阴晋":{defense:7,importance:6,type:"要塞"},
+  "酸枣":{defense:4,importance:4,type:"普通"}, "襄陵":{defense:5,importance:5,type:"普通"},
+  "观":{defense:5,importance:5,type:"边城"}, "卷":{defense:4,importance:4,type:"普通"},
+  // 韩 — 险关冶铁
+  "新郑":{defense:6,importance:9,type:"都城"}, "平阳":{defense:5,importance:6,type:"重镇"},
+  "阳翟":{defense:5,importance:6,type:"重镇"}, "宜阳":{defense:8,importance:8,type:"铁城"},
+  "宛":{defense:6,importance:7,type:"铁城"}, "缑氏":{defense:6,importance:5,type:"要塞"},
+  "纶":{defense:4,importance:4,type:"普通"}, "野王":{defense:7,importance:7,type:"险关"},
+  "负黍":{defense:4,importance:4,type:"普通"},
+  // 楚 — 南国广袤
+  "郢都":{defense:7,importance:10,type:"都城"}, "陈":{defense:6,importance:7,type:"陪都"},
+  "寿春":{defense:5,importance:8,type:"陪都"}, "鄢":{defense:6,importance:7,type:"重镇"},
+  "江陵":{defense:5,importance:6,type:"重镇"}, "黔中":{defense:4,importance:4,type:"边城"},
+  "巫郡":{defense:7,importance:6,type:"险关"}, "上蔡":{defense:5,importance:5,type:"普通"},
+  "召陵":{defense:4,importance:4,type:"普通"},
+  // 齐 — 富庶鱼盐
+  "临淄":{defense:5,importance:10,type:"都城"}, "即墨":{defense:7,importance:8,type:"重镇"},
+  "莒":{defense:7,importance:7,type:"重镇"}, "薄姑":{defense:4,importance:4,type:"普通"},
+  "聊城":{defense:5,importance:6,type:"重镇"}, "高唐":{defense:5,importance:5,type:"普通"},
+  "平陆":{defense:5,importance:5,type:"边城"}, "薛":{defense:4,importance:4,type:"普通"},
+  "安阳":{defense:5,importance:5,type:"重镇"},
+  // 燕 — 北疆险远
+  "蓟":{defense:6,importance:10,type:"都城"}, "武阳":{defense:5,importance:7,type:"重镇"},
+  "辽阳":{defense:4,importance:4,type:"边城"}, "渔阳":{defense:5,importance:5,type:"边城"},
+  "上谷":{defense:4,importance:4,type:"边城"}, "右北平":{defense:4,importance:3,type:"边城"},
+  "令支":{defense:4,importance:3,type:"边城"}, "方城":{defense:6,importance:6,type:"要塞"},
+  "涿":{defense:5,importance:5,type:"普通"}, "易":{defense:6,importance:7,type:"要塞"},
+};
+
+// 攻城概率计算：军力×城防×计策×环境叠加
+function calcCaptureChance(attackerMil, cityName, strategyBonus = 0, season = '春') {
+  const city = CITY_CHARACTERISTICS[cityName] || { defense: 5, importance: 5, type: '普通' };
+  // 基础概率 = 军力/200（0~0.5）
+  const base = attackerMil / 200;
+  // 城防系数：防御越高越难 （0.4~1.0）
+  const defenseMod = 1 - (city.defense / 25);
+  // 计策加成 （0~0.2）
+  const strategyMod = strategyBonus / 50;
+  // 季节影响
+  const seasonMod = { '春': 0, '夏': 0.05, '秋': -0.05, '冬': -0.1 }[season] || 0;
+
+  return Math.max(0.05, Math.min(0.85, base + defenseMod * 0.2 + strategyMod + seasonMod));
+}

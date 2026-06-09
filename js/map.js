@@ -281,7 +281,7 @@ const MapRenderer = {
       g.addEventListener('mouseenter', (e) => {
         this.tooltip.style.display = 'block';
         const ownerLabel = GameState.territory[city];
-        this.tooltip.innerHTML = `<span style="color:${COUNTRIES[ownerLabel]?.highlight||'#fff'}">${city}</span><br/><small>${ownerLabel}${isCapital?' · 都城':''}</small>`;
+        this.tooltip.innerHTML = `<span style="color:${COUNTRIES[ownerLabel]?.highlight||'#fff'}">${city}</span><br/><small>${ownerLabel}${isCapital?' · 都城':''}</small><br/><small>城防:${(CITY_CHARACTERISTICS[city]||{defense:'?'}).defense} 要:${(CITY_CHARACTERISTICS[city]||{importance:'?'}).importance}</small>`;
         this.tooltip.style.left = (e.clientX + 12) + 'px';
         this.tooltip.style.top = (e.clientY - 28) + 'px';
       });

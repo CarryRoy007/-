@@ -480,29 +480,36 @@ const Engine = {
     const targetCountry = GameState.countries[target];
     if (!targetCountry) return;
 
-    const attackPower = attacker.military + Math.random() * 20;
-    const defensePower = targetCountry.military + Math.random() * 20;
+    const borderCities = targetCountry.cities.filter(c => {
+      return CITY_CONNECTIONS.some(([a, b]) =>
+        (a === c && attacker.cities.includes(b)) ||
+        (b === c && attacker.cities.includes(b))
+      );
+    });
+    if (borderCities.length === 0) return;
 
-    if (attackPower > defensePower) {
-      const targetCities = targetCountry.cities.filter(c => {
-        const conn = CITY_CONNECTIONS.find(([a, b]) =>
-          (a === c && attacker.cities.includes(b)) ||
-          (b === c && attacker.cities.includes(b))
-        );
-        return conn;
-      });
-      if (targetCities.length > 0) {
-        const city = targetCities[Math.floor(Math.random() * targetCities.length)];
-        GameState.transferCity(city, target, attacker.name);
-        attacker.military = Math.max(0, attacker.military - 5);
-        GameState.addChronicle(`${attacker.name}攻取${target}之${city}。`);
-        this._addWorldEvent(`⚔ ${attacker.name}攻取${target}之${city}`);
-      }
-    } else {
+    // Pick target city — prefer lower defense
+    borderCities.sort((a, b) => {
+      const da = (CITY_CHARACTERISTICS[a] || { defense: 5 }).defense;
+      const db = (CITY_CHARACTERISTICS[b] || { defense: 5 }).defense;
+      return da - db;
+    });
+    const targetCity = borderCities[0];
+
+    // Capture probability
+    const chance = calcCaptureChance(attacker.military, targetCity, 0, GameState.getSeason());
+    const captured = Math.random() < chance;
+
+    if (captured && target !== attacker.name) {
+      GameState.transferCity(targetCity, target, attacker.name);
       attacker.military = Math.max(0, attacker.military - 8);
-      GameState.addChronicle(`${attacker.name}伐${target}，不胜而还。`);
+      const cityChar = CITY_CHARACTERISTICS[targetCity] || {};
+      GameState.addChronicle(`${attacker.name}攻取${target}之${targetCity}（${cityChar.type || '城'}）。`);
+      this._addWorldEvent(`⚔ ${attacker.name}攻取${target}之${targetCity}`);
+    } else {
+      attacker.military = Math.max(0, attacker.military - 5);
       if (target === GameState.playerCountry) {
-        this._addWorldEvent(`⚔ ${attacker.name}来犯我边境，被我军击退`);
+        this._addWorldEvent(`⚔ ${attacker.name}来犯${targetCity}，被我军击退`);
       }
     }
   },
@@ -532,24 +539,38 @@ const Engine = {
 
     if (choice.territoryEffect) {
       const te = choice.territoryEffect;
+      const player = GameState.getPlayer();
+      if (!player) return;
       if (te.gain && te.from) {
         const target = GameState.countries[te.from];
         if (target && target.cities.length > 0) {
-          const player = GameState.getPlayer();
-          const borderCity = target.cities.find(c => {
+          // Find border city — prefer lower defense
+          const borderCities = target.cities.filter(c => {
             return CITY_CONNECTIONS.some(([a, b]) =>
               (a === c && player.cities.includes(b)) ||
               (b === c && player.cities.includes(b))
             );
           });
-          if (borderCity) {
-            GameState.transferCity(borderCity, te.from, GameState.playerCountry);
-            GameState.addChronicle(`我军攻取${te.from}之${borderCity}！`, true);
+          if (borderCities.length > 0) {
+            borderCities.sort((a, b) => {
+              const da = (CITY_CHARACTERISTICS[a] || { defense: 5 }).defense;
+              const db = (CITY_CHARACTERISTICS[b] || { defense: 5 }).defense;
+              return da - db;
+            });
+            const targetCity = borderCities[0];
+            // Strategy bonus from military advisors
+            const strategists = GameState.characters.filter(c => c.type === '谋士' && c.strategy > 60);
+            const stratBonus = strategists.length > 0 ? Math.max(...strategists.map(c => c.strategy)) - 50 : 0;
+            const chance = calcCaptureChance(player.military, targetCity, stratBonus, GameState.getSeason());
+            if (Math.random() < chance) {
+              GameState.transferCity(targetCity, te.from, GameState.playerCountry);
+              const cc = CITY_CHARACTERISTICS[targetCity] || {};
+              GameState.addChronicle(`我军${stratBonus > 0 ? '用计' : ''}攻取${te.from}之${targetCity}（${cc.type || '城'}）！`, true);
+            }
           }
         }
       }
       if (te.lose && te.to) {
-        const player = GameState.getPlayer();
         if (player.cities.length > 0) {
           const city = player.cities[Math.floor(Math.random() * player.cities.length)];
           GameState.transferCity(city, GameState.playerCountry, te.to);
