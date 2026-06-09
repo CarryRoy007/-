@@ -35,6 +35,17 @@ const Engine = {
     MapRenderer.updateTerritory();
     UI.updateDiplomacy();
 
+    // Immediate check: did the player's country die during AI wars?
+    if (!GameState.countries[GameState.playerCountry].alive) {
+      GameState.gameOver = true;
+      GameState.rulerFate = { type: '亡国', text: '国破家亡，社稷不保。' };
+      UI.updateAll();
+      MapRenderer.updateTerritory();
+      this.endGame();
+      GameState.save();
+      return;
+    }
+
     // Show world events notification
     if (GameState.worldEvents && GameState.worldEvents.length > 0) {
       UI.showWorldNotify(GameState.worldEvents);
@@ -239,6 +250,18 @@ const Engine = {
 
     this._processWarResults(event, choiceIndex);
     this._randomMinorEvents();
+
+    // Player country destroyed during the choice?
+    if (!GameState.countries[GameState.playerCountry].alive) {
+      GameState.gameOver = true;
+      GameState.rulerFate = { type: '亡国', text: '国破家亡，社稷不保。' };
+      GameState.currentEvent = null;
+      GameState.pendingTurn = false;
+      UI.updateAll();
+      MapRenderer.updateTerritory();
+      this.endGame();
+      return;
+    }
 
     // Special effects — rare bonus triggers
     let specialResult = null;
