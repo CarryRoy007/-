@@ -196,7 +196,7 @@ const Engine = {
         GameState.rulerFate = choice.rulerFate;
         GameState.addChronicle(choice.rulerFate.chronicle || choice.rulerFate.text, true);
         GameState.currentEvent = null;
-        GameState.pendingTurn = false;
+        GameState.pendingTurn = true;
         UI.updateAll();
         MapRenderer.updateTerritory();
         UI.showOutcome({
@@ -309,10 +309,7 @@ const Engine = {
     GameState.pendingTurn = false;
     UI.hideOutcome();
     if (GameState.gameOver || GameState.turn >= GameState.maxTurns) {
-      if (!GameState.gameOver) {
-        GameState.gameOver = true;
-        this.endGame();
-      }
+      this.endGame();
     } else {
       this.nextTurn();
     }

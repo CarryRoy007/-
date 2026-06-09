@@ -394,7 +394,7 @@ const UI = {
       </div>
       <div class="end-buttons">
         <button class="btn-primary" onclick="Chronicle.show()">史书回放</button>
-        <button class="btn-secondary" onclick="UI.showStartScreen()">重新开始</button>
+        <button class="btn-secondary" onclick="SaveManager.clearSave();UI.showStartScreen();UI.showEraSelect();">返回初始界面</button>
       </div>
     `;
   },
