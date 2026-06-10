@@ -45,7 +45,7 @@ const countries = {
 
 const MAX_TURNS = 250;
 const ENDGAME_TURN = 220;
-const CONQUEST_TARGET = 42;
+const CONQUEST_TARGET = 38;
 
 const eras = [
   { id: "early", name: "三家分晋", year: -403, hint: "前403，七雄格局初定，诸侯尚可周旋。" },
@@ -520,7 +520,7 @@ const militaryEvents = [
     title: "兵临都畿",
     text: "{enemy}都城外郡空虚。若直逼都畿，或可震动其国；若失手，诸军难返。",
     choices: [
-      { text: "直逼都畿，一战震国", risk: 0.64, effects: { military: 13, economy: -10, diplomacy: -7 }, attack: true, chronicle: "王直逼敌国都畿，天下震动。" },
+      { text: "直逼都畿，一战震国", risk: 0.64, effects: { military: 13, economy: -10, diplomacy: -7 }, attack: true, capitalStrike: true, chronicle: "王直逼敌国都畿，天下震动。" },
       { text: "先取外郡，缓逼其都", risk: 0.4, effects: { military: 7, economy: -6, diplomacy: -4 }, attack: true, chronicle: "王先取外郡，渐逼其都。" },
       { text: "止于边境，迫其割地", risk: 0.3, effects: { economy: 4, military: 3, diplomacy: -2 }, attack: true, chronicle: "王止兵边境，迫敌割地。" },
     ],
@@ -992,7 +992,7 @@ const majorEvents = [
     major: true,
     minTurn: 90,
     choices: [
-      { text: "直趋都畿，逼其迁庙", risk: 0.62, effects: { military: 16, economy: -13, diplomacy: -12, hearts: -4 }, attack: true, captures: 4, fatalOnFail: true, chronicle: "王直趋敌都，兵临宗庙。" },
+      { text: "直趋都畿，逼其迁庙", risk: 0.62, effects: { military: 16, economy: -13, diplomacy: -12, hearts: -4 }, attack: true, capitalStrike: true, captures: 4, fatalOnFail: true, chronicle: "王直趋敌都，兵临宗庙。" },
       { text: "先扫外屏，断其羽翼", risk: 0.44, effects: { military: 10, economy: -9, diplomacy: -6 }, attack: true, captures: 2, chronicle: "王先扫敌国外屏，渐逼其都。" },
       { text: "逼其称臣，暂不入都", risk: 0.28, effects: { diplomacy: 10, economy: 6, military: 3 }, relation: { target: "enemy", delta: 12 }, chronicle: "王逼敌称臣，暂不入其都。" },
     ],
@@ -1174,12 +1174,24 @@ function clamp(value, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
 
+function chanceRoll(baseChance, options = {}) {
+  const variance = options.variance ?? 0.035;
+  const floor = options.floor ?? 0;
+  const ceiling = options.ceiling ?? 1;
+  const noise = (Math.random() * 2 - 1) * variance;
+  return Math.random() < clamp(baseChance + noise, floor, ceiling);
+}
+
+function randomInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
 function formatYear(year) {
   return year < 0 ? `前${Math.abs(year)}` : `${year}`;
 }
 
 function pick(list) {
-  return list[Math.floor(Math.random() * list.length)];
+  return list[randomInt(0, list.length - 1)];
 }
 
 function readable(text = "") {
@@ -1227,14 +1239,33 @@ function randomRulerProfile() {
   const constitution = roll < 0.24 ? constitutions[0] : roll < 0.82 ? constitutions[1] : constitutions[2];
   const [minAge, maxAge] = constitution.age;
   return {
-    age: minAge + Math.floor(Math.random() * (maxAge - minAge + 1)),
-    health: constitution.health + Math.floor(Math.random() * 5) - 2,
+    age: randomInt(minAge, maxAge),
+    health: constitution.health + randomInt(-2, 2),
     constitution: constitution.id,
     constitutionName: constitution.name,
     strain: 0,
     reignYears: 0,
     deathCause: "",
   };
+}
+
+function freshReignRecord() {
+  return {
+    choices: 0,
+    battles: 0,
+    reforms: 0,
+    mercy: 0,
+    betrayals: 0,
+    lostCities: 0,
+    gainedCities: 0,
+    majorEvents: 0,
+    failedWars: 0,
+  };
+}
+
+function addReignRecord(key, amount = 1) {
+  state.reignRecord = { ...freshReignRecord(), ...(state.reignRecord || {}) };
+  state.reignRecord[key] = (state.reignRecord[key] || 0) + amount;
 }
 
 function constitutionOf(stateLike = state) {
@@ -1316,6 +1347,8 @@ function createGame() {
     strain: selectedStyle === "martial" ? 8 : selectedStyle === "benevolent" ? -4 : 0,
     reignYears: 0,
     reignStartTerritory: initialCountForCountry(selectedCountry, owners),
+    reignStartStats: structuredClone(base),
+    reignRecord: freshReignRecord(),
     deathCause: "",
     generation: 1,
     stats: base,
@@ -1326,6 +1359,7 @@ function createGame() {
     majorTriggered: [],
     lastMajorTurn: 0,
     activePolicies: [],
+    nextPolicyTurn: 1,
     chronicle: [],
     lastAction: null,
     chainQueue: [],
@@ -1357,7 +1391,7 @@ function initialRelation(a, b) {
     韩魏: 28,
   };
   const close = neighborsFor(a).slice(0, 3).includes(b) ? -6 : 4;
-  const noise = Math.floor(Math.random() * 15) - 7;
+  const noise = randomInt(-7, 7);
   return clamp((pairBias[pair] ?? 0) + close + noise, -55, 45);
 }
 
@@ -1399,6 +1433,20 @@ function contextNames() {
     .filter((name) => name !== enemy)
     .sort((a, b) => (state.relations[state.country][b] ?? 0) - (state.relations[state.country][a] ?? 0))[0] || neighbor;
   return { enemy, neighbor, ally };
+}
+
+function capitalTargetCountry(fallback = "") {
+  const candidates = aliveCountryNames(false)
+    .filter((name) => cities.some((city) => city.country === name && city.type === "都城" && state.owners[city.id] === name))
+    .sort((a, b) => {
+      const relationA = state.relations[state.country][a] ?? 0;
+      const relationB = state.relations[state.country][b] ?? 0;
+      const countA = countryCityCount(a);
+      const countB = countryCityCount(b);
+      return relationA - relationB || countB - countA;
+    });
+  if (fallback && candidates.includes(fallback)) return fallback;
+  return candidates[0] || fallback;
 }
 
 function activePolicyTarget(kind) {
@@ -1457,9 +1505,9 @@ function nextEvent() {
   const countrySpecific = pool.filter((event) => (countryEvents[state.country] || []).some((own) => own.id === event.id));
   const militaryPool = pool.filter((event) => militaryEvents.some((own) => own.id === event.id));
   const martialCountryPool = countrySpecific.filter((event) => event.choices.some((choice) => choice.attack || choice.loseCity));
-  if (martialCountryPool.length && Math.random() < 0.34) return pick(martialCountryPool);
-  if (militaryPool.length && Math.random() < 0.62) return pick(militaryPool);
-  if (countrySpecific.length && Math.random() < 0.24) return pick(countrySpecific);
+  if (martialCountryPool.length && chanceRoll(0.34, { floor: 0.18, ceiling: 0.5 })) return pick(martialCountryPool);
+  if (militaryPool.length && chanceRoll(0.62, { floor: 0.42, ceiling: 0.78 })) return pick(militaryPool);
+  if (countrySpecific.length && chanceRoll(0.24, { floor: 0.12, ceiling: 0.42 })) return pick(countrySpecific);
   return pick(pool);
 }
 
@@ -1474,7 +1522,7 @@ function shouldOfferMajorEvent() {
   const pity = turnsSinceMajor >= 35 ? 0.16 : turnsSinceMajor >= 22 ? 0.08 : 0;
   const momentum = hasComebackMomentum() ? 0.1 : 0;
   const chance = clamp(0.08 + pressure * 0.14 + (underdog ? 0.2 : 0) + momentum + (alive <= 4 ? 0.08 : 0) + pity, 0.08, underdog ? 0.52 : 0.38);
-  return highTension && Math.random() < chance;
+  return highTension && chanceRoll(chance, { floor: 0.04, ceiling: underdog ? 0.58 : 0.42, variance: 0.05 });
 }
 
 function isPlayerUnderdog() {
@@ -1531,7 +1579,8 @@ function choiceRisk(choice) {
   const comebackRelief = choice.comeback && isPlayerUnderdog() ? 0.16 : 0;
   const momentumRelief = hasComebackMomentum() && choice.attack ? 0.1 : 0;
   const majorRelief = state.currentEvent?.major ? 0.04 : 0;
-  return clamp(dynamicRisk(choice.risk ?? 0.1) - comebackRelief - momentumRelief - majorRelief, 0.05, 0.82);
+  const singlePlayerGrace = choice.attack ? 0.05 : 0.035;
+  return clamp(dynamicRisk(choice.risk ?? 0.1) - comebackRelief - momentumRelief - majorRelief - singlePlayerGrace, 0.04, 0.76);
 }
 
 function riskMark(risk) {
@@ -1574,9 +1623,9 @@ function renderGame() {
 function renderMap() {
   const relationItems = Object.keys(countries)
     .filter((name) => name !== state.country)
-    .map((name) => ({ name, value: state.relations[state.country][name] ?? 0 }));
+    .map((name) => ({ name, value: state.relations[state.country][name] ?? 0, alive: countryCityCount(name) > 0 }));
   const activeRelations = relationItems
-    .filter((item) => item.value >= 30 || item.value <= -30);
+    .filter((item) => item.alive && (item.value >= 30 || item.value <= -30));
 
   const routes = activeRelations.map((item) => {
     const [sx, sy] = countryCenters[state.country];
@@ -1596,7 +1645,7 @@ function renderMap() {
     relationsPanel.innerHTML = relationItems
       .sort((a, b) => a.value - b.value)
       .map((item) => {
-        const status = relationStatus(item.value);
+        const status = item.alive ? relationStatus(item.value) : { label: "亡", cls: "relation-fallen" };
         return `<div class="relation-chip ${status.cls}"><strong>${item.name}</strong><span>${status.label}</span></div>`;
       })
       .join("");
@@ -1664,11 +1713,15 @@ function showCityTooltip(event) {
 
 function renderEvent(event) {
   const ctx = { ...contextNames(), ...(event.chainContext || {}) };
+  if (event.choices.some((choice) => choice.capitalStrike)) {
+    ctx.enemy = capitalTargetCountry(ctx.enemy);
+  }
   state.currentEvent = event;
   state.currentContext = ctx;
   $("#eventCard").hidden = false;
   $("#resultCard").hidden = true;
   $("#successionPanel").hidden = true;
+  $("#annualPolicyPanel").hidden = true;
   $("#nextTurnBtn").hidden = false;
   $("#eventType").textContent = readable(event.type);
   $("#eventTitle").textContent = readable(fillText(event.title, ctx));
@@ -1682,6 +1735,7 @@ function renderEvent(event) {
       <span>${readable(choice.text)}</span>
     </button>`;
   }).join("");
+  renderDirectWarPanel();
 }
 
 function moodText() {
@@ -1701,6 +1755,238 @@ function renderPolicyMount() {
     : `<div class="policy-chip"><span>无定策</span><strong>朝议</strong></div>`;
 }
 
+function directWarRisk(target) {
+  const targetCount = countryCityCount(target);
+  const relation = state.relations[state.country][target] ?? 0;
+  const militaryGap = (aiCountryPower(target) - aiCountryPower(state.country)) / 360;
+  const allyPenalty = relation >= 60 ? 0.18 : relation >= 30 ? 0.08 : 0;
+  const weakTargetRelief = targetCount <= 3 ? 0.08 : targetCount <= 6 ? 0.04 : 0;
+  const momentumRelief = hasComebackMomentum() ? 0.08 : 0;
+  return clamp(0.34 + militaryGap + allyPenalty - weakTargetRelief - momentumRelief, 0.12, 0.72);
+}
+
+function renderDirectWarPanel() {
+  const panel = $("#directWarPanel");
+  if (!panel) return;
+  const targets = aliveCountryNames(false);
+  if (!targets.length) {
+    panel.innerHTML = "";
+    return;
+  }
+  panel.innerHTML = `
+    <div class="direct-war-head">
+      <strong>主动出兵</strong>
+      <span>可不等事件，直接指定目标</span>
+    </div>
+    <div class="direct-war-buttons">
+      ${targets.map((target) => {
+        const mark = riskMark(directWarRisk(target));
+        return `<button class="war-target-btn" type="button" data-war-target="${target}">
+          <span>伐${target}</span>
+          <strong>${mark.label}</strong>
+        </button>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+function shouldOfferAnnualPolicy() {
+  return state.turn >= (state.nextPolicyTurn || 1);
+}
+
+function annualPolicyGroups() {
+  const ctx = contextNames();
+  const weak = aliveCountryNames(false).sort((a, b) => countryCityCount(a) - countryCityCount(b))[0] || ctx.enemy;
+  const strong = dominantCountry(false)?.name || ctx.enemy;
+  const late = state.turn >= 120;
+  const endgame = state.turn >= 190;
+  return [
+    {
+      id: "foreign",
+      title: "对外关系",
+      options: [
+        {
+          id: "ally",
+          title: `与${ctx.ally}结盟`,
+          desc: "盟线立即成立，五年内互相亲近，但国库略耗。",
+          effects: { diplomacy: 5, economy: -2 },
+          relation: [{ target: ctx.ally, delta: 18 }],
+          alliance: ctx.ally,
+          policy: { id: "annual_ally", name: `盟${ctx.ally}拒敌`, duration: 5, ally: ctx.ally, effectsPerTurn: { diplomacy: 1, economy: -1 }, relationPerTurn: [{ target: ctx.ally, delta: 4 }] },
+        },
+        {
+          id: "enemy",
+          title: `敌视${ctx.enemy}`,
+          desc: "明确主敌，军心更齐，外交转硬。",
+          effects: { military: 4, diplomacy: -3 },
+          hostility: ctx.enemy,
+          policy: { id: "annual_enemy", name: `以${ctx.enemy}为敌`, duration: 5, enemy: ctx.enemy, effectsPerTurn: { military: 1, diplomacy: -1 }, relationPerTurn: [{ target: ctx.enemy, delta: -5 }] },
+        },
+        {
+          id: "balance",
+          title: "观变诸侯",
+          desc: "不急结怨，保留转圜余地。",
+          effects: { diplomacy: 3, economy: 2, military: -1 },
+          policy: { id: "annual_balance", name: "持衡观变", duration: 5, effectsPerTurn: { diplomacy: 1, economy: 1, military: -1 } },
+        },
+        ...(late ? [{
+          id: "coerce_weak",
+          title: `威服${weak}`,
+          desc: "以强压弱，可能引出后续吞并机会。",
+          effects: { military: 5, diplomacy: -4 },
+          hostility: weak,
+          policy: { id: "annual_coerce", name: `威服${weak}`, duration: 5, enemy: weak, effectsPerTurn: { military: 2, diplomacy: -1 }, relationPerTurn: [{ target: weak, delta: -6 }] },
+        }] : []),
+      ],
+    },
+    {
+      id: "military",
+      title: "对外军事",
+      options: [
+        {
+          id: "prepare",
+          title: "整军备战",
+          desc: "来年作战更有底气，财赋承压。",
+          effects: { military: 6, economy: -4 },
+          policy: { id: "annual_prepare", name: "整军备战", duration: 5, effectsPerTurn: { military: 2, economy: -1 } },
+        },
+        {
+          id: "raid",
+          title: `袭扰${ctx.enemy}`,
+          desc: "持续压迫主敌，地图更容易变化。",
+          effects: { military: 4, economy: -3, diplomacy: -2 },
+          hostility: ctx.enemy,
+          policy: { id: "annual_raid", name: `袭扰${ctx.enemy}`, duration: 5, enemy: ctx.enemy, effectsPerTurn: { military: 2, economy: -1 }, relationPerTurn: [{ target: ctx.enemy, delta: -4 }] },
+        },
+        {
+          id: "defend",
+          title: "固守关隘",
+          desc: "降低被袭风险，扩张会慢一些。",
+          effects: { military: 3, hearts: 2, economy: 1 },
+          policy: { id: "annual_defend", name: "固守关隘", duration: 5, effectsPerTurn: { military: 1, hearts: 1, diplomacy: 1 } },
+        },
+        ...(endgame ? [{
+          id: "final_war",
+          title: `并军攻${strong}`,
+          desc: "后期决战方针，胜机更大，列国更惧。",
+          effects: { military: 8, economy: -7, diplomacy: -5 },
+          hostility: strong,
+          policy: { id: "annual_final_war", name: `并军攻${strong}`, duration: 5, enemy: strong, effectsPerTurn: { military: 3, economy: -2, diplomacy: -1 }, relationPerTurn: [{ target: strong, delta: -6 }] },
+        }] : []),
+      ],
+    },
+    {
+      id: "domestic",
+      title: "国内政策",
+      options: [
+        {
+          id: "rest",
+          title: "休养生息",
+          desc: "民心与寿命压力好转，扩张稍缓。",
+          effects: { hearts: 6, economy: 3, military: -2 },
+          policy: { id: "annual_rest", name: "休养生息", duration: 5, effectsPerTurn: { hearts: 2, economy: 1, military: -1 } },
+        },
+        {
+          id: "reform",
+          title: "修法强国",
+          desc: "朝政与军制更强，百姓会有怨声。",
+          effects: { court: 7, military: 3, hearts: -4 },
+          policy: { id: "annual_reform", name: "修法强国", duration: 5, effectsPerTurn: { court: 2, military: 1, hearts: -1 } },
+          reform: true,
+        },
+        {
+          id: "treasury",
+          title: "富国实仓",
+          desc: "国库增长，短期民力较紧。",
+          effects: { economy: 7, hearts: -3, court: 2 },
+          policy: { id: "annual_treasury", name: "富国实仓", duration: 5, effectsPerTurn: { economy: 2, hearts: -1 } },
+        },
+        ...(playerCities().length > (state.reignStartTerritory || 0) ? [{
+          id: "pacify",
+          title: "抚定新地",
+          desc: "降低新占城反复，军费略增。",
+          effects: { hearts: 4, court: 4, economy: -3 },
+          policy: { id: "annual_pacify", name: "抚定新地", duration: 5, effectsPerTurn: { hearts: 1, court: 1, economy: -1 } },
+        }] : []),
+      ],
+    },
+  ];
+}
+
+function renderAnnualPolicyPanel() {
+  const panel = $("#annualPolicyPanel");
+  if (!panel || state.pendingSuccession) {
+    if (panel) panel.hidden = true;
+    return;
+  }
+  const groups = annualPolicyGroups();
+  panel.hidden = false;
+  $("#nextTurnBtn").hidden = true;
+  panel.innerHTML = `
+    <div class="policy-survey-head">
+      <strong>五年方针</strong>
+      <span>数年一议，定三策而后入明年</span>
+    </div>
+    <div class="policy-survey-grid">
+      ${groups.map((group) => `<fieldset class="policy-group" data-policy-group="${group.id}">
+        <legend>${group.title}</legend>
+        ${group.options.map((option, index) => `<label class="policy-option">
+          <input type="radio" name="policy-${group.id}" value="${option.id}" ${index === 0 ? "checked" : ""}>
+          <span>${option.title}<small>${option.desc}</small></span>
+        </label>`).join("")}
+      </fieldset>`).join("")}
+    </div>
+    <button id="submitAnnualPolicyBtn" class="primary-btn" type="button">定策入明年</button>
+  `;
+}
+
+function applyAnnualPolicySelection() {
+  const panel = $("#annualPolicyPanel");
+  if (!panel || panel.hidden) return;
+  const groups = annualPolicyGroups();
+  const chosen = groups.map((group) => {
+    const checked = panel.querySelector(`input[name="policy-${group.id}"]:checked`);
+    return group.options.find((option) => option.id === checked?.value) || group.options[0];
+  });
+
+  const notes = [];
+  chosen.forEach((option) => {
+    applyEffects(state.stats, option.effects || {});
+    if (option.alliance) setAlliance(option.alliance);
+    if (option.hostility) setHostility(option.hostility);
+    (option.relation || []).forEach((item) => adjustRelation(item.target, item.delta));
+    if (option.policy) {
+      const text = enactPolicy(option.policy, {}, true);
+      if (text) notes.push(text);
+    }
+    if (option.reform) {
+      state.legacy.reforms += 1;
+      addReignRecord("reforms");
+    }
+  });
+  addReignRecord("choices", chosen.length);
+  state.chronicle.push(`${formatYear(state.year)}：岁末定策：${chosen.map((item) => item.title).join("、")}。`);
+  state.nextPolicyTurn = state.turn + 5;
+
+  const lifeNote = advanceTime();
+  const terminal = terminalSettlement();
+  panel.hidden = true;
+  $("#nextTurnBtn").hidden = false;
+  const suffix = `${notes.join(" ")}${lifeNote ? ` ${lifeNote}` : ""}`;
+  if (suffix.trim()) $("#resultText").textContent = readable(`${$("#resultText").textContent} ${suffix}`);
+
+  renderSuccessionPanel();
+  renderMap();
+  renderChronicle();
+  renderStatsOnly();
+
+  if (isDefeated()) {
+    endGame("亡国");
+  } else if (terminal) {
+    endGame(terminal);
+  }
+}
+
 function renderChronicle() {
   $("#chronicleList").innerHTML = state.chronicle.slice(-9).reverse().map((item) => `<li>${readable(item)}</li>`).join("");
 }
@@ -1709,9 +1995,10 @@ function resolveChoice(index) {
   const event = state.currentEvent;
   const choice = event.choices[index];
   const risk = choiceRisk(choice);
-  const success = Math.random() > risk;
+  const success = chanceRoll(1 - risk, { floor: 0.04, ceiling: 0.96, variance: 0.045 });
   const multiplier = success ? (risk > 0.5 ? 1.35 : risk > 0.25 ? 1.15 : 1) : -0.45;
   const effects = {};
+  addReignRecord("choices");
 
   Object.entries(choice.effects || {}).forEach(([key, value]) => {
     effects[key] = Math.round(value * multiplier);
@@ -1738,41 +2025,60 @@ function resolveChoice(index) {
   }
 
   if (choice.attack && success) {
-    const capture = captureCity(state.currentContext.enemy);
+    const oldEnemy = state.currentContext.enemy;
+    const capture = captureCity(oldEnemy, "", { capitalOnly: !!choice.capitalStrike });
     if (capture) {
       result += ` 遂取${capture.name}，版图益广。`;
       state.legacy.battles += 1;
+      addReignRecord("battles");
+      addReignRecord("gainedCities");
       const capturedIds = [capture.id];
+      if (choice.capitalStrike) {
+        const collapse = capitalCollapse(oldEnemy, capture, risk);
+        if (collapse) result += ` ${collapse}`;
+      }
       const targetCaptures = (choice.captures || 1) + (hasComebackMomentum() ? 1 : 0);
       for (let i = 1; i < targetCaptures; i += 1) {
         const extra = captureCity(state.currentContext.enemy, capturedIds);
         if (!extra) break;
         capturedIds.push(extra.id);
+        addReignRecord("gainedCities");
         result += ` 乘势又下${extra.name}。`;
       }
       if (targetCaptures <= 1) {
         const extra = maybeCaptureBonus(risk, capturedIds);
         if (extra) {
+          addReignRecord("gainedCities");
           result += ` 余威所及，又下${extra.name}。`;
         }
       }
-      if (choice.comeback && Math.random() < 0.45) {
+      if (choice.comeback && chanceRoll(0.45, { floor: 0.18, ceiling: 0.68 })) {
         const extra = captureCity(state.currentContext.enemy, capturedIds);
-        if (extra) result += ` 故土响应，复得${extra.name}。`;
+        if (extra) {
+          addReignRecord("gainedCities");
+          result += ` 故土响应，复得${extra.name}。`;
+        }
       }
-      if (!choice.comeback && hasComebackMomentum() && Math.random() < 0.55) {
+      if (!choice.comeback && hasComebackMomentum() && chanceRoll(0.55, { floor: 0.25, ceiling: 0.78 })) {
         const extra = captureCity(state.currentContext.enemy, capturedIds);
-        if (extra) result += ` 中兴之势未衰，又拔${extra.name}。`;
+        if (extra) {
+          addReignRecord("gainedCities");
+          result += ` 中兴之势未衰，又拔${extra.name}。`;
+        }
       }
     }
   } else if (choice.attack && !success) {
+    addReignRecord("failedWars");
     result += " 师出不利，诸侯窥我。";
     state.stats.military = clamp(state.stats.military - 7);
     state.stats.hearts = clamp(state.stats.hearts - 4);
     if (choice.fatalOnFail) state.stats.military = clamp(state.stats.military - 18);
     for (let i = 0; i < (choice.loseOnFail || 0); i += 1) {
       const lost = losePlayerCity();
-      if (lost) result += ` ${lost.name}因败而失。`;
+      if (lost) {
+        addReignRecord("lostCities");
+        result += ` ${lost.name}因败而失。`;
+      }
     }
   }
 
@@ -1781,30 +2087,126 @@ function resolveChoice(index) {
     if (lost) {
       result += ` ${lost.name}不复为我国有。`;
       state.legacy.lostCities += 1;
+      addReignRecord("lostCities");
     }
   }
 
-  if (event.type === "变法" || event.type === "军改" || event.type === "法术") state.legacy.reforms += success ? 1 : 0;
-  if ((choice.effects?.hearts || 0) > 5) state.legacy.mercy += 1;
-  if ((choice.effects?.diplomacy || 0) < -5) state.legacy.betrayals += 1;
+  if (event.type === "变法" || event.type === "军改" || event.type === "法术") {
+    state.legacy.reforms += success ? 1 : 0;
+    if (success) addReignRecord("reforms");
+  }
+  if ((choice.effects?.hearts || 0) > 5) {
+    state.legacy.mercy += 1;
+    addReignRecord("mercy");
+  }
+  if ((choice.effects?.diplomacy || 0) < -5) {
+    state.legacy.betrayals += 1;
+    addReignRecord("betrayals");
+  }
   applyRulerStrain(choice, event, success, risk);
   enqueueChoiceChain(choice, success);
 
   if (event.major) {
     state.majorTriggered.push(event.id);
     state.lastMajorTurn = state.turn;
+    addReignRecord("majorEvents");
   }
   state.triggered.push(event.id);
   state.chronicle.push(`${formatYear(state.year)}：${result}`);
-  const lifeNote = advanceTime();
-  if (lifeNote) result += ` ${lifeNote}`;
-  const terminal = terminalSettlement();
+  const askPolicy = shouldOfferAnnualPolicy();
+  let terminal = "";
+  if (!askPolicy) {
+    const lifeNote = advanceTime();
+    if (lifeNote) result += ` ${lifeNote}`;
+    terminal = terminalSettlement();
+  }
 
   $("#eventCard").hidden = true;
   $("#resultCard").hidden = false;
   $("#resultTag").textContent = success ? "事成" : "事挫";
   $("#resultText").textContent = readable(result);
   renderSuccessionPanel();
+  if (askPolicy) {
+    renderAnnualPolicyPanel();
+  } else {
+    $("#annualPolicyPanel").hidden = true;
+    $("#nextTurnBtn").hidden = !!state.pendingSuccession;
+  }
+  renderMap();
+  renderChronicle();
+  renderStatsOnly();
+
+  if (isDefeated()) {
+    endGame("亡国");
+  } else if (terminal) {
+    endGame(terminal);
+  }
+}
+
+function resolveDirectWar(target) {
+  if (!target || countryCityCount(target) <= 0) return;
+  const risk = directWarRisk(target);
+  const success = chanceRoll(1 - risk, { floor: 0.05, ceiling: 0.9, variance: 0.05 });
+  const relation = state.relations[state.country][target] ?? 0;
+  const effects = success
+    ? { military: risk > 0.48 ? 6 : 4, economy: -5, diplomacy: relation >= 30 ? -8 : -4 }
+    : { military: -8, hearts: -4, economy: -3, diplomacy: -3 };
+
+  addReignRecord("choices");
+  applyEffects(state.stats, effects);
+  setHostility(target, relation >= 60 ? -70 : -55);
+  state.currentContext = { ...(state.currentContext || contextNames()), enemy: target };
+  state.lastAction = null;
+
+  let result = `王不待朝议，命将出兵伐${target}。`;
+  if (success) {
+    const capture = captureCity(target);
+    addReignRecord("battles");
+    state.legacy.battles += 1;
+    if (capture) {
+      addReignRecord("gainedCities");
+      result += ` 师行有功，取${capture.name}。`;
+      const extra = maybeCaptureBonus(risk, [capture.id]);
+      if (extra) {
+        addReignRecord("gainedCities");
+        result += ` 乘胜又下${extra.name}。`;
+      }
+    } else {
+      result += " 敌境无隙，兵锋未能取地。";
+    }
+  } else {
+    addReignRecord("failedWars");
+    result += " 师出不利，军心受挫。";
+    if (risk >= 0.55 && chanceRoll(0.28, { floor: 0.12, ceiling: 0.42 })) {
+      const lost = losePlayerCity();
+      if (lost) {
+        state.legacy.lostCities += 1;
+        addReignRecord("lostCities");
+        result += ` ${lost.name}因败而失。`;
+      }
+    }
+  }
+
+  state.chronicle.push(`${formatYear(state.year)}：${result}`);
+  const askPolicy = shouldOfferAnnualPolicy();
+  let terminal = "";
+  if (!askPolicy) {
+    const lifeNote = advanceTime();
+    if (lifeNote) result += ` ${lifeNote}`;
+    terminal = terminalSettlement();
+  }
+
+  $("#eventCard").hidden = true;
+  $("#resultCard").hidden = false;
+  $("#resultTag").textContent = success ? "军胜" : "军挫";
+  $("#resultText").textContent = readable(result);
+  renderSuccessionPanel();
+  if (askPolicy) {
+    renderAnnualPolicyPanel();
+  } else {
+    $("#annualPolicyPanel").hidden = true;
+    $("#nextTurnBtn").hidden = !!state.pendingSuccession;
+  }
   renderMap();
   renderChronicle();
   renderStatsOnly();
@@ -1817,14 +2219,28 @@ function resolveChoice(index) {
 }
 
 function adjustRelation(target, delta) {
-  if (!target || target === state.country) return;
+  if (!target || target === state.country || countryCityCount(target) <= 0) return;
   state.relations[state.country][target] = clamp((state.relations[state.country][target] ?? 0) + delta, -100, 100);
   state.relations[target][state.country] = state.relations[state.country][target];
 }
 
+function setAlliance(target, floor = 70) {
+  if (!target || target === state.country || countryCityCount(target) <= 0) return;
+  const value = Math.max(state.relations[state.country][target] ?? 0, floor);
+  state.relations[state.country][target] = value;
+  state.relations[target][state.country] = value;
+}
+
+function setHostility(target, ceiling = -55) {
+  if (!target || target === state.country || countryCityCount(target) <= 0) return;
+  const value = Math.min(state.relations[state.country][target] ?? 0, ceiling);
+  state.relations[state.country][target] = value;
+  state.relations[target][state.country] = value;
+}
+
 function maybeCaptureBonus(risk, firstCityId) {
-  const chance = (risk > 0.45 ? 0.12 : 0.04) + (state.stats.military > 78 ? 0.08 : 0) + (state.stats.economy > 66 ? 0.04 : 0);
-  if (Math.random() > chance) return null;
+  const chance = (risk > 0.45 ? 0.16 : 0.08) + (state.stats.military > 72 ? 0.09 : 0) + (state.stats.economy > 64 ? 0.05 : 0);
+  if (!chanceRoll(chance, { floor: 0.04, ceiling: 0.5 })) return null;
   return captureCity(state.currentContext.enemy, firstCityId);
 }
 
@@ -1834,9 +2250,9 @@ function enqueueChoiceChain(choice, success) {
 }
 
 function enqueueChain(chain, ctx = {}) {
-  if (Math.random() > (chain.chance ?? 1)) return;
+  if (!chanceRoll(chain.chance ?? 1, { floor: 0, ceiling: 1, variance: 0.03 })) return;
   const [minDelay, maxDelay] = chain.delay || [2, 4];
-  const delay = minDelay + Math.floor(Math.random() * (maxDelay - minDelay + 1));
+  const delay = randomInt(minDelay, maxDelay);
   const context = {};
   Object.entries(chain.context || {}).forEach(([key, value]) => {
     context[key] = ctx[value] || value;
@@ -1851,10 +2267,16 @@ function enqueueChain(chain, ctx = {}) {
   });
 }
 
-function captureCity(preferredOwner = "", excludeCityId = "") {
+function captureCity(preferredOwner = "", excludeCityId = "", options = {}) {
   const excluded = Array.isArray(excludeCityId) ? excludeCityId : [excludeCityId].filter(Boolean);
-  const preferred = cities.filter((city) => state.owners[city.id] === preferredOwner && !excluded.includes(city.id));
-  const candidates = preferred.length ? preferred : cities.filter((city) => state.owners[city.id] !== state.country && !excluded.includes(city.id));
+  const filterTarget = (city) => {
+    if (excluded.includes(city.id)) return false;
+    if (options.capitalOnly && city.type !== "都城") return false;
+    return true;
+  };
+  const preferred = cities.filter((city) => state.owners[city.id] === preferredOwner && filterTarget(city));
+  if (options.capitalOnly && preferredOwner && !preferred.length) return null;
+  const candidates = preferred.length ? preferred : cities.filter((city) => state.owners[city.id] !== state.country && filterTarget(city));
   const targets = candidates
     .map((city) => {
       const [px, py] = countryCenters[state.country];
@@ -1884,6 +2306,31 @@ function captureCity(preferredOwner = "", excludeCityId = "") {
   return target;
 }
 
+function capitalCollapse(owner, capturedCapital, risk) {
+  if (!capturedCapital || capturedCapital.type !== "都城" || !owner || owner === state.country) return "";
+  const remaining = cities.filter((city) => state.owners[city.id] === owner);
+  if (!remaining.length) return "";
+  const baseChance = 0.18
+    + (state.stats.military - 62) / 260
+    + (state.stats.court - 50) / 420
+    + (hasComebackMomentum() ? 0.08 : 0)
+    - remaining.length * 0.018
+    - risk * 0.12;
+  if (!chanceRoll(baseChance, { floor: 0.08, ceiling: 0.48, variance: 0.06 })) return "";
+
+  remaining.forEach((city) => {
+    state.owners[city.id] = state.country;
+    markContested(city.id, owner, state.country);
+  });
+  addReignRecord("gainedCities", remaining.length);
+  state.stats.diplomacy = clamp(state.stats.diplomacy - 8);
+  state.stats.hearts = clamp(state.stats.hearts + 4);
+  setHostility(owner, -85);
+  state.legacy.fallenStates = (state.legacy.fallenStates || []).filter((name) => name !== owner);
+  state.lastAction = { from: countryCenters[state.country], to: [capturedCapital.x, capturedCapital.y], cityId: capturedCapital.id };
+  return `${owner}君出奔，宗庙震动，余郡望风而降。`;
+}
+
 function losePlayerCity() {
   const holdings = playerCities().filter((city) => city.type !== "都城").sort((a, b) => a.value - b.value);
   const lost = holdings[0];
@@ -1903,7 +2350,7 @@ function markContested(cityId, oldOwner, newOwner) {
     oldOwner,
     newOwner,
     untilTurn: state.turn + 5,
-    heat: 2 + Math.floor(Math.random() * 3),
+    heat: randomInt(2, 4),
   });
 }
 
@@ -1920,22 +2367,27 @@ function settleContestedCities() {
     const oldPower = item.oldOwner === state.country ? state.stats.diplomacy + state.stats.military : aiCountryPower(item.oldOwner);
     const revoltChance = clamp(0.04 + item.heat * 0.025 + city.value * 0.008 + (oldPower - holdPower) / 520, 0.03, 0.2);
 
-    if (Math.random() < revoltChance) {
+    if (chanceRoll(revoltChance, { floor: 0.02, ceiling: 0.26 })) {
+      const wasFallen = (state.legacy.fallenStates || []).includes(item.oldOwner) && countryCityCount(item.oldOwner) <= 0;
       state.owners[item.cityId] = item.oldOwner;
+      if (wasFallen) {
+        state.legacy.fallenStates = state.legacy.fallenStates.filter((name) => name !== item.oldOwner);
+      }
       state.lastAction = { from: countryCenters[item.oldOwner], to: [city.x, city.y], cityId: city.id };
       if (isPlayerHeld) {
         state.stats.hearts = clamp(state.stats.hearts - 4);
         state.stats.military = clamp(state.stats.military - 3);
         state.legacy.lostCities += 1;
+        addReignRecord("lostCities");
       }
       if (isPlayerFormer) {
         state.stats.hearts = clamp(state.stats.hearts + 3);
       }
-      state.chronicle.push(`${formatYear(state.year)}：${city.name}新附未稳，旧党复起，城归${item.oldOwner}。`);
+      state.chronicle.push(`${formatYear(state.year)}：${city.name}新附未稳，旧党复起，城归${item.oldOwner}${wasFallen ? "，其国号复见于诸侯" : ""}。`);
       continue;
     }
 
-    if (Math.random() < 0.1 && isPlayerHeld) {
+    if (chanceRoll(0.1, { floor: 0.04, ceiling: 0.18 }) && isPlayerHeld) {
       state.stats.economy = clamp(state.stats.economy - 2);
       state.chronicle.push(`${formatYear(state.year)}：${city.name}新附未安，需留兵抚民，国库稍耗。`);
     }
@@ -1974,14 +2426,14 @@ function healthLossThisTurn() {
   if (state.strain > 68) loss += 2;
   if (state.stats.hearts > 72 && state.stats.economy > 62) loss -= 2;
   if (state.stats.diplomacy > 74 && state.stats.military < 72) loss -= 1;
-  return clamp(loss + Math.floor(Math.random() * 3) - 1, 0, 9);
+  return clamp(loss + randomInt(-1, 1), 0, 9);
 }
 
 function rulerLifeEvent() {
   const body = constitutionOf();
   const newReignDampener = (state.reignYears || 0) < 12 && state.stats.court >= 28 && state.stats.hearts >= 28 && state.strain < 86 ? 0.25 : 1;
   const coupChance = clamp((0.0005 + (state.stats.court < 34 ? 0.035 : 0) + (state.stats.hearts < 32 ? 0.025 : 0) + (state.strain > 70 ? 0.018 : 0)) * newReignDampener, 0, 0.12);
-  if (Math.random() < coupChance) {
+  if (chanceRoll(coupChance, { floor: 0, ceiling: 0.14, variance: 0.015 })) {
     const cause = state.stats.court < 30 ? "权臣架空，幽居而薨" : "宫中生变";
     prepareSuccession(cause, state.rulerAge < 58);
     return cause === "权臣架空，幽居而薨" ? "王为权臣所制，幽居而薨。" : "宫中生变，王暴崩，新君仓促即位。";
@@ -1992,13 +2444,13 @@ function rulerLifeEvent() {
   const policyRisk = (state.strain || 0) / 900 + (state.stats.hearts < 30 ? 0.035 : 0) + (state.stats.military > 86 ? 0.025 : 0);
   const deathChance = clamp((ageRisk + healthRisk + policyRisk + body.early) * ((state.reignYears || 0) < 10 ? 0.55 : 1), 0.002, 0.42);
 
-  if (Math.random() < deathChance) {
+  if (chanceRoll(deathChance, { floor: 0.001, ceiling: 0.45, variance: 0.025 })) {
     const causes = [];
     if (state.stats.military > 82 || state.strain > 58) causes.push("劳于兵事");
     if (state.stats.hearts < 32) causes.push("忧民变");
     if (state.stats.court > 78 && state.stats.hearts < 42) causes.push("法急伤神");
     if (state.health < 25 || body.id === "frail") causes.push("宿疾复作");
-    if (state.stats.court < 34 && Math.random() < 0.35) causes.push("权柄旁落，郁郁而终");
+    if (state.stats.court < 34 && chanceRoll(0.35, { floor: 0.18, ceiling: 0.52 })) causes.push("权柄旁落，郁郁而终");
     if (!causes.length) causes.push(state.rulerAge >= 60 ? "年老疾作" : "暴疾");
     state.deathCause = pick(causes);
     const early = state.rulerAge < 52;
@@ -2007,8 +2459,8 @@ function rulerLifeEvent() {
   }
 
   const longLifeChance = clamp(0.02 + body.long + (state.stats.hearts > 70 ? 0.04 : 0) + (state.stats.economy > 68 ? 0.03 : 0) - (state.strain || 0) / 500, 0, 0.18);
-  if (state.rulerAge >= 56 && state.health >= 42 && Math.random() < longLifeChance) {
-    const recovery = 6 + Math.floor(Math.random() * 7);
+  if (state.rulerAge >= 56 && state.health >= 42 && chanceRoll(longLifeChance, { floor: 0, ceiling: 0.22, variance: 0.025 })) {
+    const recovery = randomInt(6, 12);
     state.health = clamp(state.health + recovery);
     state.strain = clamp((state.strain || 0) - 8);
     state.legacy.longLife += 1;
@@ -2040,6 +2492,8 @@ function enactPolicy(policy, ctx, success) {
   };
   state.activePolicies = (state.activePolicies || []).filter((item) => item.name !== resolved.name);
   state.activePolicies.push(resolved);
+  if (resolved.ally) setAlliance(resolved.ally);
+  if (resolved.enemy) setHostility(resolved.enemy);
   return `乃定「${resolved.name}」之策，行${duration}年。`;
 }
 
@@ -2115,13 +2569,15 @@ function advanceTime() {
 
 function aiTurn() {
   const pressure = endgamePressure();
-  const pulses = 1 + (Math.random() < 0.5 + pressure * 0.2 ? 1 : 0) + (Math.random() < 0.12 + pressure * 0.18 ? 1 : 0);
+  const pulses = 1
+    + (chanceRoll(0.5 + pressure * 0.2, { floor: 0.38, ceiling: 0.78 }) ? 1 : 0)
+    + (chanceRoll(0.12 + pressure * 0.18, { floor: 0.08, ceiling: 0.36 }) ? 1 : 0);
   for (let i = 0; i < pulses; i += 1) {
-    if (Math.random() < 0.24 - pressure * 0.08) aiCoalitionStrike();
-    if (Math.random() < 0.42 + pressure * 0.24) aiAttackAi();
+    if (chanceRoll(0.24 - pressure * 0.08, { floor: 0.08, ceiling: 0.3 })) aiCoalitionStrike();
+    if (chanceRoll(0.42 + pressure * 0.24, { floor: 0.28, ceiling: 0.72 })) aiAttackAi();
   }
-  if (Math.random() < 0.38 + pressure * 0.16) aiAttackPlayer();
-  if (Math.random() < 0.12 + pressure * 0.5 || aliveCountryNames(true).length > desiredAliveCountries()) aiConsolidateWeakState();
+  if (chanceRoll(0.3 + pressure * 0.12, { floor: 0.14, ceiling: 0.5 })) aiAttackPlayer();
+  if (chanceRoll(0.12 + pressure * 0.5, { floor: 0.06, ceiling: 0.7 }) || aliveCountryNames(true).length > desiredAliveCountries()) aiConsolidateWeakState();
 }
 
 function endgamePressure() {
@@ -2189,11 +2645,12 @@ function aiAttackPlayer() {
   const underdogShield = isPlayerUnderdog() ? 0.12 : 0;
   const momentumShield = hasComebackMomentum() ? 0.1 : 0;
   const danger = 0.08 + (state.stats.military < 44 ? 0.1 : 0) + (state.relations[state.country][hostile] < -30 ? 0.12 : 0) + (playerDominant ? 0.16 : 0) + (state.stats.diplomacy < 38 ? 0.05 : 0) - underdogShield - momentumShield;
-  if (Math.random() < danger) {
+  if (chanceRoll(danger, { floor: 0.03, ceiling: 0.32, variance: 0.04 })) {
     state.owners[vulnerable.id] = hostile;
     state.stats.hearts = clamp(state.stats.hearts - 5);
     state.stats.military = clamp(state.stats.military - 4);
     state.legacy.lostCities += 1;
+    addReignRecord("lostCities");
     adjustRelation(hostile, -8);
     state.lastAction = { from: countryCenters[hostile], to: [vulnerable.x, vulnerable.y], cityId: vulnerable.id };
     state.chronicle.push(`${formatYear(state.year)}：${hostile}乘隙袭我，${vulnerable.name}陷。`);
@@ -2217,7 +2674,7 @@ function aiAttackAi() {
 
   const strong = dominantCountry(false);
   const neighborOptions = neighborsFor(attacker).filter((name) => name !== state.country && name !== attacker && countryCityCount(name) > 0);
-  const targetOwner = (strong && strong.name !== attacker && neighborOptions.includes(strong.name) && Math.random() < 0.48)
+  const targetOwner = (strong && strong.name !== attacker && neighborOptions.includes(strong.name) && chanceRoll(0.48, { floor: 0.28, ceiling: 0.66 }))
     ? strong.name
     : neighborOptions
         .map((name) => ({
@@ -2235,14 +2692,14 @@ function aiAttackAi() {
   const tinyRaiderPenalty = attackerCount <= 5 && targetCount >= attackerCount + 8 ? 0.12 : 0;
   const overreachPenalty = attackerCount > countryBaseCount(attacker) + 5 ? 0.1 : 0;
   const chance = clamp(0.16 + (aiCountryPower(attacker) - aiCountryPower(targetOwner)) / 310 + underdogBonus - overreachPenalty - tinyRaiderPenalty, 0.05, 0.34);
-  if (Math.random() < chance) {
+  if (chanceRoll(chance, { floor: 0.05, ceiling: 0.38, variance: 0.045 })) {
     state.owners[target.id] = attacker;
     markContested(target.id, targetOwner, attacker);
     state.lastAction = { from: countryCenters[attacker], to: [target.x, target.y], cityId: target.id };
-    if (Math.random() < 0.62) {
+    if (chanceRoll(0.62, { floor: 0.45, ceiling: 0.78 })) {
       state.chronicle.push(`${formatYear(state.year)}：${attacker}攻${targetOwner}，取${target.name}，诸侯版图又变。`);
     }
-  } else if (Math.random() < 0.32) {
+  } else if (chanceRoll(0.32, { floor: 0.18, ceiling: 0.48 })) {
     state.lastAction = { from: countryCenters[attacker], to: [target.x, target.y], cityId: target.id };
     state.chronicle.push(`${formatYear(state.year)}：${attacker}扰${targetOwner}边境，${target.name}烽火数起，城未易主。`);
   }
@@ -2262,7 +2719,7 @@ function aiCoalitionStrike() {
   const chance = targetOwner === state.country
     ? clamp(0.16 + (playerCities().length - countryBaseCount(state.country)) / 80 - state.stats.diplomacy / 500, 0.08, 0.34)
     : clamp(0.28 + (strong.count - strong.base) / 80, 0.16, 0.5);
-  if (Math.random() > chance) return;
+  if (!chanceRoll(chance, { floor: 0.08, ceiling: 0.54, variance: 0.05 })) return;
 
   state.owners[target.id] = attacker;
   markContested(target.id, targetOwner, attacker);
@@ -2270,6 +2727,7 @@ function aiCoalitionStrike() {
     state.stats.diplomacy = clamp(state.stats.diplomacy - 4);
     state.stats.hearts = clamp(state.stats.hearts - 3);
     state.legacy.lostCities += 1;
+    addReignRecord("lostCities");
   }
   state.lastAction = { from: countryCenters[attacker], to: [target.x, target.y], cityId: target.id };
   state.chronicle.push(`${formatYear(state.year)}：诸国畏${targetOwner}坐大，${attacker}乘势取${target.name}。`);
@@ -2341,7 +2799,10 @@ function prepareSuccession(cause = "病重去世", early = false) {
 function evaluateRulerEpitaph(cause, early) {
   const territory = playerCities().length;
   const baseTerritory = state.reignStartTerritory ?? territory;
+  const record = { ...freshReignRecord(), ...(state.reignRecord || {}) };
+  const startStats = state.reignStartStats || state.stats;
   const avg = Math.round(Object.values(state.stats).reduce((sum, value) => sum + value, 0) / 5);
+  const startAvg = Math.round(Object.values(startStats).reduce((sum, value) => sum + value, 0) / 5);
   let word = "安";
   let reason = posthumousReason(word);
   if (cause.includes("架空") || cause.includes("宫中")) word = "幽";
@@ -2349,19 +2810,19 @@ function evaluateRulerEpitaph(cause, early) {
   else if (early) {
     word = "悼";
     reason = posthumousReason(word);
-  } else if (territory >= baseTerritory + 6 && state.legacy.battles >= 3) {
+  } else if (territory >= baseTerritory + 5 && record.battles >= 2) {
     word = "武";
     reason = posthumousReason(word);
-  } else if (state.legacy.reforms >= 2) {
+  } else if (record.reforms >= 2) {
     word = "明";
     reason = posthumousReason(word);
-  } else if (state.stats.hearts >= 70) {
+  } else if (state.stats.hearts >= 70 && record.lostCities <= 1) {
     word = "惠";
     reason = posthumousReason(word);
-  } else if (avg >= 68) {
+  } else if (avg >= startAvg + 6 || avg >= 68) {
     word = "昭";
     reason = posthumousReason(word);
-  } else if (state.legacy.lostCities >= 3) {
+  } else if (record.lostCities >= 3 || territory <= baseTerritory - 4) {
     word = "愍";
     reason = posthumousReason(word);
   }
@@ -2377,7 +2838,13 @@ function evaluateRulerEpitaph(cause, early) {
     : gains < 0
       ? `终有城${territory}，较即位时失${Math.abs(gains)}。`
       : `终有城${territory}，与即位时疆域相若。`;
-  const policyLine = state.stats.hearts < 38
+  const policyLine = record.gainedCities >= 5
+    ? "用兵能拓土，然兵锋所至，诸侯亦惧。"
+    : record.lostCities >= 3
+      ? "守土多失，民心虽在，国势已伤。"
+      : record.reforms >= 2
+        ? "法令数更，国政稍振，而民亦承其急。"
+        : state.stats.hearts < 38
     ? "民心不固，虽有兵威，根本未安。"
     : state.stats.court > 70
       ? "法令颇行，然急政之弊亦随之。"
@@ -2417,6 +2884,8 @@ function inheritThrone(heirIndex = 0) {
   state.strain = 0;
   state.reignYears = 0;
   state.reignStartTerritory = playerCities().length;
+  state.reignStartStats = structuredClone(state.stats);
+  state.reignRecord = freshReignRecord();
   state.generation += 1;
   state.pendingSuccession = null;
   state.chronicle.push(`${formatYear(state.year)}：${heir.name}即位，体质${nextRuler.constitutionName}，故事继续。`);
@@ -2523,10 +2992,13 @@ function migrateState() {
   state.activePolicies.forEach((policy) => {
     if (policy.name === "中兴之势") policy.momentum = true;
   });
+  state.nextPolicyTurn = state.nextPolicyTurn || state.turn || 1;
   state.maxTurns = MAX_TURNS;
   state.strain = clamp(state.strain || 0);
   state.reignYears = state.reignYears || 0;
   if (typeof state.reignStartTerritory !== "number") state.reignStartTerritory = playerCities().length;
+  state.reignStartStats = state.reignStartStats || structuredClone(state.stats);
+  state.reignRecord = { ...freshReignRecord(), ...(state.reignRecord || {}) };
   state.chainQueue = state.chainQueue || [];
   state.contestedCities = state.contestedCities || [];
 }
@@ -2583,14 +3055,15 @@ function posthumousSinglePool() {
 }
 
 function posthumousCandidates(primary) {
+  const record = { ...freshReignRecord(), ...(state.reignRecord || {}) };
   const secondary = [];
-  if (state.legacy.battles >= 3 || state.stats.military >= 72) secondary.push("武");
+  if (record.battles >= 2 || state.stats.military >= 72) secondary.push("武");
   if (state.stats.hearts >= 65) secondary.push("惠");
-  if (state.stats.court >= 68 || state.legacy.reforms >= 2) secondary.push("明");
+  if (state.stats.court >= 68 || record.reforms >= 2) secondary.push("明");
   if (state.stats.diplomacy >= 68) secondary.push("宣");
   if (state.stats.economy >= 68) secondary.push("文");
-  if (state.legacy.lostCities >= 3) secondary.push("愍");
-  if (state.legacy.earlyDeaths >= 1) secondary.push("悼");
+  if (record.lostCities >= 3) secondary.push("愍");
+  if ((state.reignYears || 0) <= 8) secondary.push("悼");
 
   const base = [primary, ...secondary.filter((word) => word !== primary)];
   const doubles = base.flatMap((word) => secondary
@@ -2725,6 +3198,15 @@ function bindEvents() {
     const btn = event.target.closest("[data-choice]");
     if (!btn) return;
     resolveChoice(Number(btn.dataset.choice));
+  });
+  $("#directWarPanel").addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-war-target]");
+    if (!btn) return;
+    resolveDirectWar(btn.dataset.warTarget);
+  });
+  $("#annualPolicyPanel").addEventListener("click", (event) => {
+    if (!event.target.closest("#submitAnnualPolicyBtn")) return;
+    applyAnnualPolicySelection();
   });
   $("#nextTurnBtn").addEventListener("click", nextTurn);
   $("#heirChoices").addEventListener("click", (event) => {
