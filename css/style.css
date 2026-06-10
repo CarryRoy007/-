@@ -302,8 +302,9 @@ h1 {
 .legend i {
   display: inline-block;
   width: 18px;
-  height: 2px;
+  height: 4px;
   margin-right: 5px;
+  box-shadow: 0 0 8px currentColor;
   vertical-align: middle;
 }
 
@@ -375,24 +376,73 @@ h1 {
 
 .route {
   fill: none;
-  stroke-width: 2;
-  stroke-dasharray: 7 8;
-  opacity: 0.78;
+  stroke-width: 5;
+  stroke-dasharray: 10 8;
+  opacity: 0.95;
+  paint-order: stroke;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 7px rgba(255, 240, 190, 0.55));
 }
 
 .route.attack {
   stroke: #e1b456;
-  stroke-width: 3;
+  stroke-width: 6;
   stroke-dasharray: none;
   animation: routeGlow 800ms ease-in-out infinite alternate;
 }
 
 .route.enemy {
-  stroke: #c75b4f;
+  stroke: #ff5c4d;
+  filter: drop-shadow(0 0 9px rgba(255, 92, 77, 0.85));
 }
 
 .route.ally {
-  stroke: #87b477;
+  stroke: #91df77;
+  filter: drop-shadow(0 0 9px rgba(145, 223, 119, 0.85));
+}
+
+.relations-panel {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.relation-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 232, 184, 0.16);
+  background: rgba(34, 23, 16, 0.55);
+  color: var(--soft);
+  font-size: 0.86rem;
+}
+
+.relation-chip strong {
+  color: var(--text);
+}
+
+.relation-chip span {
+  font-weight: 700;
+}
+
+.relation-ally span {
+  color: #91df77;
+}
+
+.relation-enemy span {
+  color: #ff7668;
+}
+
+.relation-tense span {
+  color: #e1b456;
+}
+
+.relation-neutral span {
+  color: #d2ba87;
 }
 
 @keyframes routeGlow {
@@ -469,6 +519,37 @@ h1 {
   height: 100%;
   width: 100%;
   background: linear-gradient(90deg, #9f4d42, #d6a64d, #78a76d);
+}
+
+.policy-mount {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.policy-chip {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(225, 180, 86, 0.22);
+  background: rgba(225, 180, 86, 0.08);
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.policy-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.policy-chip strong {
+  flex: 0 0 auto;
+  color: var(--gold);
+  font-size: 0.78rem;
 }
 
 .event-card,
@@ -641,6 +722,10 @@ h1 {
   .chronicle-panel ol {
     grid-template-columns: 1fr 1fr;
   }
+
+  .relations-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -668,5 +753,9 @@ h1 {
 
   .chronicle-panel ol {
     grid-template-columns: 1fr;
+  }
+
+  .relations-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
