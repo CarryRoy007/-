@@ -1,110 +1,159 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>战国策·抉择</title>
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-
-  <div id="start-screen">
-    <h1 class="game-title">战国策</h1>
-    <p class="game-subtitle">抉 择</p>
-    <div class="start-buttons">
-      <button id="btn-new-game" class="btn-primary">开始新游戏</button>
-      <button id="btn-continue" class="btn-secondary" style="display:none">继续游戏</button>
-    </div>
-    <div id="era-select" style="display:none">
-      <h2>选择纪元</h2>
-      <div id="era-list"></div>
-    </div>
-    <div id="country-select" style="display:none">
-      <h2>选择国家</h2>
-      <div id="country-list"></div>
-    </div>
-  </div>
-
-  <div id="game-screen">
-    <header id="game-header">
-      <div class="header-left">
-        <span id="header-country"></span>
-        <span id="header-year"></span>
-        <span id="header-season"></span>
-      </div>
-      <div id="world-notify" style="display:none"></div>
-      <div class="header-right">
-        <span id="header-health"></span>
-        <span id="header-turn"></span>
-        <span id="header-cities"></span>
-      </div>
-    </header>
-
-    <div id="map-area">
-      <div id="map-container"></div>
-    </div>
-
-    <aside id="side-panel">
-      <div class="panel-section">
-        <div class="panel-title">国力</div>
-        <div id="stats-panel"></div>
-      </div>
-      <div class="panel-section">
-        <div class="panel-title">在朝人物</div>
-        <div id="characters-panel"></div>
-      </div>
-      <div class="panel-section">
-        <div class="panel-title">外交关系</div>
-        <div id="diplomacy-panel"></div>
-      </div>
-    </aside>
-
-    <div id="event-area">
-      <div id="event-panel">
-        <h2 id="event-title"></h2>
-        <div id="event-text"></div>
-        <div id="event-choices"></div>
-      </div>
-      <div id="outcome-panel" style="display:none">
-        <div class="outcome-verdict">
-          <span id="outcome-verdict-text"></span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>战国：君王一念</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="startScreen" class="screen start-screen active">
+        <div class="start-map" aria-hidden="true">
+          <svg viewBox="0 0 720 520" role="img">
+            <path d="M98 80 232 54 318 112 276 218 130 228 58 156Z" />
+            <path d="M314 74 442 56 526 148 464 252 326 232 282 136Z" />
+            <path d="M82 254 238 238 310 326 250 452 112 438 48 338Z" />
+            <path d="M332 260 486 238 610 316 558 454 398 466 308 370Z" />
+            <path d="M514 94 650 126 680 246 610 314 492 246Z" />
+          </svg>
         </div>
-        <div class="outcome-scroll">
-          <div class="scroll-label">史官记述</div>
-          <div id="outcome-chronicle"></div>
-          <div id="outcome-stats"></div>
-          <div id="outcome-territory"></div>
-          <div id="outcome-fate"></div>
+        <div class="start-content">
+          <p class="eyebrow">战国策略抉择</p>
+          <h1>战国：君王一念</h1>
+          <p class="start-copy">
+            以一国之君的身份入局，在变法、合纵、征伐、让步之间取舍。史书不会问你是否完美，只会记下你付出了什么，又换来了什么。
+          </p>
+
+          <div class="setup-grid">
+            <section class="setup-panel">
+              <div class="panel-title">
+                <span>选择国家</span>
+                <strong id="countryHint">秦：强军重法，易成众矢之的。</strong>
+              </div>
+              <div id="countrySelect" class="country-grid"></div>
+            </section>
+
+            <section class="setup-panel">
+              <div class="panel-title">
+                <span>入局年代</span>
+                <strong id="eraHint">前403，七雄格局初定，诸侯尚可周旋。</strong>
+              </div>
+              <div id="eraSelect" class="segmented"></div>
+            </section>
+
+            <section class="setup-panel">
+              <div class="panel-title">
+                <span>君主气质</span>
+                <strong id="styleHint">尚武：兵威起势，民力承压。</strong>
+              </div>
+              <div id="rulerStyleSelect" class="segmented"></div>
+            </section>
+          </div>
+
+          <div class="start-actions">
+            <button id="continueBtn" class="ghost-btn" type="button">读取旧档</button>
+            <button id="startBtn" class="primary-btn" type="button">即位临朝</button>
+          </div>
         </div>
-        <button id="outcome-continue" class="btn-primary btn-continue" onclick="Engine.onContinue()">史笔留此，君王珍重</button>
-      </div>
-    </div>
-  </div>
+      </section>
 
-  <div id="end-screen">
-    <div id="end-content"></div>
-  </div>
+      <section id="gameScreen" class="screen game-screen">
+        <header class="topbar">
+          <div>
+            <p id="turnLabel" class="eyebrow">前403 · 第1回合</p>
+            <h2 id="realmTitle">秦国朝堂</h2>
+          </div>
+          <div class="top-actions">
+            <button id="saveBtn" class="icon-btn" type="button" title="存档">存</button>
+            <button id="restartBtn" class="icon-btn" type="button" title="重开">返</button>
+          </div>
+        </header>
 
-  <div id="chronicle-modal">
-    <div id="chronicle-inner">
-      <div id="chronicle-header">
-        <h2>史书回放</h2>
-        <button id="chronicle-close" onclick="UI.hideChronicle()">&times;</button>
-      </div>
-      <div id="chronicle-content"></div>
-    </div>
-  </div>
+        <section class="game-layout">
+          <div class="map-panel">
+            <div class="map-head">
+              <div>
+                <span>天下形势</span>
+                <strong id="territoryCount">城池 0</strong>
+              </div>
+              <div id="relationLegend" class="legend"></div>
+            </div>
+            <div id="mapMount" class="map-mount"></div>
+            <div id="relationsPanel" class="relations-panel"></div>
+            <div id="cityTooltip" class="city-tooltip" hidden></div>
+          </div>
 
-  <script src="js/countries.js"></script>
-  <script src="js/characters.js"></script>
-  <script src="js/events.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/map.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/epitaph.js"></script>
-  <script src="js/chronicle.js"></script>
-  <script src="js/save.js"></script>
-  <script src="js/app.js"></script>
-</body>
+          <aside class="court-panel">
+            <section class="stats-panel">
+              <div id="statsMount" class="stats-grid"></div>
+              <div class="health-row">
+                <span>君寿</span>
+                <div class="meter"><i id="healthMeter"></i></div>
+                <strong id="healthLabel">100</strong>
+              </div>
+              <div id="policyMount" class="policy-mount"></div>
+            </section>
+
+            <section id="eventCard" class="event-card">
+              <div class="event-kicker">
+                <span id="eventType">朝议</span>
+                <strong id="riskMood">局势未明</strong>
+              </div>
+              <h3 id="eventTitle">待诏</h3>
+              <p id="eventText"></p>
+              <div id="choicesMount" class="choices"></div>
+              <div id="directWarPanel" class="direct-war-panel"></div>
+            </section>
+
+            <section id="resultCard" class="result-card" hidden>
+              <div class="event-kicker">
+                <span>史官记</span>
+                <strong id="resultTag">事定</strong>
+              </div>
+              <p id="resultText"></p>
+              <div id="annualPolicyPanel" class="annual-policy-panel" hidden></div>
+              <div id="successionPanel" class="succession-panel" hidden>
+                <h4 id="successionTitle">先王定谥</h4>
+                <p id="successionText"></p>
+                <div id="heirChoices" class="choices"></div>
+                <button id="endReignBtn" class="ghost-btn" type="button">以此君作结</button>
+              </div>
+              <button id="nextTurnBtn" class="primary-btn" type="button">续书下一年</button>
+            </section>
+          </aside>
+        </section>
+
+        <section class="chronicle-panel">
+          <div class="panel-title">
+            <span>竹简纪年</span>
+            <strong id="legacyHint">尚未有定评</strong>
+          </div>
+          <ol id="chronicleList"></ol>
+        </section>
+      </section>
+
+      <section id="endingScreen" class="screen ending-screen">
+        <div class="ending-panel">
+          <p class="eyebrow">太史公书</p>
+          <h2 id="endingTitle">谥曰</h2>
+          <p id="endingSummary" class="ending-summary"></p>
+          <div id="endingGrades" class="ending-grades"></div>
+          <section>
+            <h3>本纪</h3>
+            <p id="endingChronicle"></p>
+          </section>
+          <section>
+            <h3>后世论</h3>
+            <p id="endingAfterword"></p>
+          </section>
+          <div class="start-actions">
+            <button id="endingRestartBtn" class="primary-btn" type="button">再开一局</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/app.js"></script>
+  </body>
 </html>
